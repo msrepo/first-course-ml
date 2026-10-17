@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 1: Linear Modelling, a least-squares approach</title>
+<style>
+:root{--bg:#fff;--fg:#1f2328;--muted:#656d76;--grid:#d8dee4;--pt:#1f6feb;--user:#d1242f;--best:#1a7f37;--card:#f6f8fa}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--grid:#30363d;--pt:#58a6ff;--user:#ff7b72;--best:#3fb950;--card:#161b22}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:.5rem 0}
+.card{background:var(--card);border-radius:8px;padding:12px 16px;margin:12px 0}
+.row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin:6px 0}
+.row output{font-variant-numeric:tabular-nums;min-width:7em;text-align:right}
+input[type=range]{width:100%}
+svg{width:100%;height:auto;display:block;background:var(--bg);border-radius:8px}
+.axis text{fill:var(--muted);font-size:12px}
+.grid line{stroke:var(--grid)}
+.opts{display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+button,select{font:inherit;padding:4px 10px}
+.loss{display:flex;flex-wrap:wrap;gap:24px}
+.loss b{font-variant-numeric:tabular-nums}
+.sw{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:4px}
+.muted{color:var(--muted);font-size:.9rem}
+</style>
+</head>
+<body>
+<main>
+<h1>Linear modelling: a least-squares approach</h1>
+<p class="muted">Chapter 1 · Model: <i>t</i> = w<sub>0</sub> + w<sub>1</sub>·<i>x</i>, where <i>x</i> is the Olympic year and <i>t</i> the winning time in seconds. Move the sliders to fit a line by eye, then compare with the least-squares solution.</p>
+
+<div class="card opts">
+  <label>Event <select id="ev"></select></label>
+  <label><input type="checkbox" id="showBest"> Show best least-squares fit</label>
+  <label><input type="checkbox" id="showRes" checked> Show residuals</label>
+  <button id="toBest">Set sliders to best fit</button>
+</div>
+
+<svg id="plot" viewBox="0 0 760 420" role="img" aria-label="Olympic winning times with a fitted line"></svg>
+<p class="muted"><span class="sw" style="background:var(--user)"></span>your line &nbsp; <span class="sw" style="background:var(--best)"></span>least-squares fit &nbsp; <span style="color:var(--pt)">●</span> Olympic winners (data: <code>olympics.mat</code>)</p>
+
+<div class="card">
+  <div class="row"><label for="w0">w<sub>0</sub> (intercept)</label><input type="range" id="w0"><output id="w0o"></output></div>
+  <div class="row"><label for="w1">w<sub>1</sub> (slope)</label><input type="range" id="w1"><output id="w1o"></output></div>
+  <p class="muted">w<sub>0</sub> is the value at year 0, far from the data, so w<sub>0</sub> and w<sub>1</sub> trade off: a steeper slope needs a larger intercept to compensate.</p>
+</div>
+
+<div class="card loss">
+  <div>Your loss, L = (1/N) Σ (t<sub>n</sub> − w<sub>0</sub> − w<sub>1</sub>x<sub>n</sub>)²: <b id="Lu"></b></div>
+  <div id="bestBox" hidden>Best fit: w<sub>0</sub> = <b id="bw0"></b>, w<sub>1</sub> = <b id="bw1"></b>, L = <b id="Lb"></b></div>
+</div>
+
+<div class="card muted">
+The least-squares solution minimises L. Setting ∂L/∂w<sub>0</sub> = 0 and ∂L/∂w<sub>1</sub> = 0 gives
+w<sub>1</sub> = (mean(xt) − mean(x)·mean(t)) / (mean(x²) − mean(x)²) and w<sub>0</sub> = mean(t) − w<sub>1</sub>·mean(x).
+</div>
+</main>
+<script>
+const DATA = {"male100": [[1896.0, 12.0], [1900.0, 11.0], [1904.0, 11.0], [1906.0, 11.2], [1908.0, 10.8], [1912.0, 10.8], [1920.0, 10.8], [1924.0, 10.6], [1928.0, 10.8], [1932.0, 10.3], [1936.0, 10.3], [1948.0, 10.3], [1952.0, 10.4], [1956.0, 10.5], [1960.0, 10.2], [1964.0, 10.0], [1968.0, 9.95], [1972.0, 10.14], [1976.0, 10.06], [1980.0, 10.25], [1984.0, 9.99], [1988.0, 9.92], [1992.0, 9.96], [1996.0, 9.84], [2000.0, 9.87], [2004.0, 9.85], [2008.0, 9.69]], "female100": [[1928.0, 12.2], [1932.0, 11.9], [1936.0, 11.5], [1948.0, 11.9], [1952.0, 11.5], [1956.0, 11.5], [1960.0, 11.0], [1964.0, 11.4], [1968.0, 11.0], [1972.0, 11.07], [1976.0, 11.08], [1980.0, 11.06], [1984.0, 10.97], [1988.0, 10.54], [1992.0, 10.82], [1996.0, 10.94], [2000.0, 11.12], [2004.0, 10.93], [2008.0, 10.78]], "male200": [[1900.0, 22.2], [1904.0, 21.6], [1908.0, 22.6], [1912.0, 21.7], [1920.0, 22.0], [1924.0, 21.6], [1928.0, 21.8], [1932.0, 21.2], [1936.0, 20.7], [1948.0, 21.1], [1952.0, 20.7], [1956.0, 20.6], [1960.0, 20.5], [1964.0, 20.3], [1968.0, 19.8], [1972.0, 20.0], [1976.0, 20.23], [1980.0, 20.19], [1984.0, 19.8], [1988.0, 19.75], [1992.0, 20.01], [1996.0, 19.32], [2000.0, 20.09], [2004.0, 19.79], [2008.0, 19.3]], "female200": [[1948.0, 24.4], [1952.0, 23.7], [1956.0, 23.4], [1960.0, 24.0], [1964.0, 23.0], [1968.0, 22.5], [1972.0, 22.4], [1976.0, 22.37], [1980.0, 22.03], [1984.0, 21.81], [1988.0, 21.34], [1992.0, 21.81], [1996.0, 22.12], [2000.0, 22.27], [2004.0, 22.05], [2008.0, 21.74]], "male400": [[1896.0, 54.2], [1900.0, 49.4], [1904.0, 49.2], [1906.0, 53.2], [1908.0, 50.0], [1912.0, 48.2], [1920.0, 49.6], [1924.0, 47.6], [1928.0, 47.8], [1932.0, 46.2], [1936.0, 46.5], [1948.0, 46.2], [1952.0, 45.9], [1956.0, 46.7], [1960.0, 44.9], [1964.0, 45.1], [1968.0, 43.8], [1972.0, 44.66], [1976.0, 44.26], [1980.0, 44.6], [1984.0, 44.27], [1988.0, 43.87], [1992.0, 43.5], [1996.0, 43.49], [2000.0, 43.84], [2004.0, 44.0], [2008.0, 43.75]], "female400": [[1964.0, 52.0], [1968.0, 52.0], [1972.0, 51.08], [1976.0, 49.29], [1980.0, 48.88], [1984.0, 48.83], [1988.0, 48.65], [1992.0, 48.83], [1996.0, 48.25], [2000.0, 49.11], [2004.0, 49.41], [2008.0, 49.62]]};
+const NAMES = {male100:"Men's 100 m",female100:"Women's 100 m",male200:"Men's 200 m",female200:"Women's 200 m",male400:"Men's 400 m",female400:"Women's 400 m"};
+const $ = id => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
+const W=760,H=420,M={l:56,r:16,t:16,b:40};
+let pts, best, ext;
+
+function fit(p){
+  const n=p.length, mx=p.reduce((a,q)=>a+q[0],0)/n, mt=p.reduce((a,q)=>a+q[1],0)/n;
+  const mxt=p.reduce((a,q)=>a+q[0]*q[1],0)/n, mxx=p.reduce((a,q)=>a+q[0]*q[0],0)/n;
+  const w1=(mxt-mx*mt)/(mxx-mx*mx);
+  return {w0:mt-w1*mx,w1};
+}
+const loss=(w0,w1)=>pts.reduce((a,q)=>a+(q[1]-w0-w1*q[0])**2,0)/pts.length;
+const fmt=(v,d=4)=>v.toFixed(d);
+
+function setEvent(k){
+  pts=DATA[k]; best=fit(pts);
+  const xs=pts.map(q=>q[0]), ts=pts.map(q=>q[1]);
+  ext={x0:Math.min(...xs)-4,x1:Math.max(...xs)+4,t0:Math.min(...ts)-1,t1:Math.max(...ts)+1};
+  const a=Math.abs(best.w1);
+  const s1=$("w1"), s0=$("w0");
+  s1.min=-3*a; s1.max=3*a; s1.step=a/500;
+  s0.min=0; s0.max=Math.ceil(3*Math.abs(best.w0)); s0.step=0.05;
+  s0.value=Math.round(best.w0*0.5*20)/20; s1.value=0;   // deliberately off the optimum
+  draw();
+}
+
+function el(n,a,p){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);(p||$("plot")).appendChild(e);return e}
+const X=v=>M.l+(v-ext.x0)/(ext.x1-ext.x0)*(W-M.l-M.r);
+const Y=v=>H-M.b-(v-ext.t0)/(ext.t1-ext.t0)*(H-M.t-M.b);
+
+function line(w0,w1,color,dash){
+  el("line",{x1:X(ext.x0),y1:Y(w0+w1*ext.x0),x2:X(ext.x1),y2:Y(w0+w1*ext.x1),stroke:color,"stroke-width":2.5,"stroke-dasharray":dash||"",
+    "clip-path":"url(#clip)"});
+}
+
+function draw(){
+  const svg=$("plot"); svg.innerHTML="";
+  const defs=el("defs",{}); const cp=el("clipPath",{id:"clip"},defs);
+  el("rect",{x:M.l,y:M.t,width:W-M.l-M.r,height:H-M.t-M.b},cp);
+  const g=el("g",{class:"grid"}), ax=el("g",{class:"axis"});
+  const tstep=(ext.t1-ext.t0)>10?2:1;
+  for(let t=Math.ceil(ext.t0/tstep)*tstep;t<=ext.t1;t+=tstep){
+    el("line",{x1:M.l,x2:W-M.r,y1:Y(t),y2:Y(t)},g);
+    el("text",{x:M.l-6,y:Y(t)+4,"text-anchor":"end"},ax).textContent=t;
+  }
+  for(let x=Math.ceil(ext.x0/20)*20;x<=ext.x1;x+=20){
+    el("line",{x1:X(x),x2:X(x),y1:M.t,y2:H-M.b},g);
+    el("text",{x:X(x),y:H-M.b+16,"text-anchor":"middle"},ax).textContent=x;
+  }
+  el("text",{x:(W+M.l)/2,y:H-6,"text-anchor":"middle"},ax).textContent="Olympic year";
+  el("text",{transform:`translate(14 ${H/2}) rotate(-90)`,"text-anchor":"middle"},ax).textContent="Winning time (s)";
+
+  const w0=+$("w0").value, w1=+$("w1").value;
+  if($("showBest").checked) line(best.w0,best.w1,"var(--best)");
+  if($("showRes").checked) pts.forEach(q=>el("line",{x1:X(q[0]),x2:X(q[0]),y1:Y(q[1]),y2:Y(w0+w1*q[0]),stroke:"var(--user)","stroke-opacity":.45,"stroke-width":1.5,"clip-path":"url(#clip)"}));
+  line(w0,w1,"var(--user)");
+  pts.forEach(q=>el("circle",{cx:X(q[0]),cy:Y(q[1]),r:4,fill:"var(--pt)"}));
+
+  $("w0o").textContent=fmt(w0,2); $("w1o").textContent=fmt(w1,4);
+  $("Lu").textContent=fmt(loss(w0,w1),3);
+  $("bestBox").hidden=!$("showBest").checked;
+  $("bw0").textContent=fmt(best.w0,3); $("bw1").textContent=fmt(best.w1,5); $("Lb").textContent=fmt(loss(best.w0,best.w1),3);
+}
+
+for(const k in NAMES){const o=document.createElement("option");o.value=k;o.textContent=NAMES[k];$("ev").appendChild(o)}
+$("ev").onchange=e=>setEvent(e.target.value);
+["w0","w1","showBest","showRes"].forEach(id=>$(id).addEventListener("input",draw));
+$("toBest").onclick=()=>{$("w0").value=best.w0;$("w1").value=best.w1;draw()};
+setEvent("male100");
+</script>
+</body>
+</html>
