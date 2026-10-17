@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 3: The beta density</title>
+<style>
+:root{--bg:#fff;--fg:#1f2328;--muted:#656d76;--grid:#d8dee4;--curve:#1f6feb;--mean:#d1242f;--card:#f6f8fa}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--grid:#30363d;--curve:#58a6ff;--mean:#ff7b72;--card:#161b22}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:.5rem 0}
+.card{background:var(--card);border-radius:8px;padding:12px 16px;margin:12px 0}
+.row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin:6px 0}
+.row output{font-variant-numeric:tabular-nums;min-width:4em;text-align:right}
+input[type=range]{width:100%}
+svg{width:100%;height:auto;display:block;background:var(--bg);border-radius:8px}
+.axis text{fill:var(--muted);font-size:12px}
+.grid line{stroke:var(--grid)}
+.opts{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+button{font:inherit;padding:4px 10px}
+.muted{color:var(--muted);font-size:.9rem}
+.nums{display:flex;flex-wrap:wrap;gap:8px 28px}
+.nums b{font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<main>
+<h1>The beta density</h1>
+<p class="muted">Chapter 3 · A distribution over a probability r between 0 and 1, with density p(r) = Γ(α+β)/(Γ(α)Γ(β)) · r<sup>α−1</sup>(1−r)<sup>β−1</sup>. The two parameters α and β control its shape, and they can be read as imagined heads and tails.</p>
+
+<div class="card opts">
+  <span class="muted">Examples from the book:</span>
+  <button data-a="1" data-b="1">Know nothing (1, 1)</button>
+  <button data-a="50" data-b="50">Fair coin (50, 50)</button>
+  <button data-a="5" data-b="1">Biased (5, 1)</button>
+</div>
+
+<svg id="plot" viewBox="0 0 760 380" role="img" aria-label="Beta density curve for the chosen alpha and beta"></svg>
+<p class="muted"><span style="color:var(--curve)">━</span> density &nbsp; <span style="color:var(--mean)">╎</span> mean α/(α+β)</p>
+
+<div class="card">
+  <div class="row"><label for="a">α</label><input type="range" id="a" min="0.2" max="60" step="0.1" value="5"><output id="ao"></output></div>
+  <div class="row"><label for="b">β</label><input type="range" id="b" min="0.2" max="60" step="0.1" value="2"><output id="bo"></output></div>
+</div>
+
+<div class="card nums">
+  <div>Mean: <b id="mean"></b></div>
+  <div>Variance: <b id="var"></b></div>
+  <div>Imagined tosses α + β: <b id="n"></b></div>
+</div>
+
+<div class="card muted">
+α = β = 1 is flat: every r is equally likely. α = β gives a density symmetric about 1/2, narrower as α + β grows (a more confident belief that the coin is fair). α &gt; β leans toward heads, α &lt; β toward tails. With α or β below 1 the density piles up at an end of the interval and rises without limit there.
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id), NS="http://www.w3.org/2000/svg";
+function lgamma(x){                        // Lanczos approximation of log Γ(x)
+  const g=7,c=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+  if(x<0.5) return Math.log(Math.PI/Math.sin(Math.PI*x))-lgamma(1-x);
+  x-=1; let s=c[0]; for(let i=1;i<g+2;i++) s+=c[i]/(x+i); const t=x+g+.5;
+  return .5*Math.log(2*Math.PI)+(x+.5)*Math.log(t)-t+Math.log(s);
+}
+const pdf=(r,a,b)=>Math.exp(lgamma(a+b)-lgamma(a)-lgamma(b)+(a-1)*Math.log(r)+(b-1)*Math.log(1-r));
+function el(n,a,p){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e}
+const M={l:56,r:16,t:16,b:40}, W=760, H=380;
+function draw(){
+  const a=+$("a").value, b=+$("b").value, svg=$("plot"); svg.innerHTML="";
+  const pts=[]; for(let i=1;i<400;i++){const r=i/400; pts.push([r,pdf(r,a,b)])}
+  const peak=Math.max(...pts.map(p=>p[1])), ymax=Math.min(Math.max(peak*1.1,1.5),12);
+  const X=v=>M.l+v*(W-M.l-M.r), Y=v=>H-M.b-Math.min(v,ymax)/ymax*(H-M.t-M.b);
+  const g=el("g",{class:"grid"},svg), ax=el("g",{class:"axis"},svg);
+  for(let k=0;k<=5;k++){const v=ymax*k/5;el("line",{x1:M.l,x2:W-M.r,y1:Y(v),y2:Y(v)},g);el("text",{x:M.l-6,y:Y(v)+4,"text-anchor":"end"},ax).textContent=v.toFixed(1)}
+  for(let k=0;k<=10;k++){el("text",{x:X(k/10),y:H-M.b+16,"text-anchor":"middle"},ax).textContent=(k/10).toFixed(1)}
+  el("text",{x:(W+M.l)/2,y:H-6,"text-anchor":"middle"},ax).textContent="r (probability of heads)";
+  el("text",{transform:`translate(14 ${H/2}) rotate(-90)`,"text-anchor":"middle"},ax).textContent="p(r)";
+  const clip=el("clipPath",{id:"c"},el("defs",{},svg)); el("rect",{x:M.l,y:M.t,width:W-M.l-M.r,height:H-M.t-M.b},clip);
+  const mu=a/(a+b); el("line",{x1:X(mu),x2:X(mu),y1:M.t,y2:H-M.b,stroke:"var(--mean)","stroke-dasharray":"5 4","stroke-width":2},svg);
+  el("path",{d:pts.map((p,i)=>(i?"L":"M")+X(p[0]).toFixed(1)+" "+Y(p[1]).toFixed(1)).join(""),fill:"none",stroke:"var(--curve)","stroke-width":2.5,"clip-path":"url(#c)"},svg);
+  $("ao").textContent=a.toFixed(1); $("bo").textContent=b.toFixed(1);
+  $("mean").textContent=mu.toFixed(3); $("var").textContent=(a*b/((a+b)**2*(a+b+1))).toFixed(4); $("n").textContent=(a+b).toFixed(1);
+}
+["a","b"].forEach(id=>$(id).addEventListener("input",draw));
+document.querySelectorAll("button[data-a]").forEach(btn=>btn.onclick=()=>{$("a").value=btn.dataset.a;$("b").value=btn.dataset.b;draw()});
+draw();
+</script>
+</body>
+</html>

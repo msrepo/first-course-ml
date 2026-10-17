@@ -19,3 +19,4 @@ Notes by chapter (work in progress).
 ## Chapter 3: The Bayesian approach
 
 - [Chapter 3 summary: the Bayesian approach](chapter3-summary.html)
+- [Interactive: the beta density](chapter3-beta-density.html)
