@@ -34,7 +34,7 @@ button,select{font:inherit;padding:4px 10px}
   <label>Event <select id="ev"></select></label>
   <label><input type="checkbox" id="showBest"> Show best least-squares fit</label>
   <label><input type="checkbox" id="showRes" checked> Show residuals</label>
-  <label><input type="checkbox" id="center" checked> Centre the year (w<sub>1</sub> pivots about the middle of the data)</label>
+  <label><input type="checkbox" id="center" checked> Count years from 1900 (w<sub>1</sub> pivots about 1900)</label>
   <button id="toBest">Set sliders to best fit</button>
 </div>
 
@@ -44,7 +44,7 @@ button,select{font:inherit;padding:4px 10px}
 <div class="card">
   <div class="row"><label for="w0">w<sub>0</sub> (intercept)</label><input type="range" id="w0"><output id="w0o"></output></div>
   <div class="row"><label for="w1">w<sub>1</sub> (slope)</label><input type="range" id="w1"><output id="w1o"></output></div>
-  <p class="muted">w<sub>0</sub> is the predicted time at <i>x</i> = <i>c</i>; w<sub>1</sub> tilts the line about that point. Untick "Centre the year" to use the raw year as in the book (<i>c</i> = 0): then w<sub>0</sub> is the value at year 0, far off the plot, so w<sub>1</sub> appears to shift the line and the two parameters trade off.</p>
+  <p class="muted">w<sub>0</sub> is the predicted time at <i>x</i> = <i>c</i>; w<sub>1</sub> tilts the line about that point. Untick "Count years from 1900" to use the raw year as in the book (<i>c</i> = 0): then w<sub>0</sub> is the value at year 0, far off the plot, so w<sub>1</sub> appears to shift the line and the two parameters trade off.</p>
 </div>
 
 <div class="card loss">
@@ -76,8 +76,8 @@ const fmt=(v,d=4)=>v.toFixed(d);
 
 function setEvent(k){
   key=k; pts=DATA[k];
-  c=$("center").checked?Math.round(pts.reduce((a,q)=>a+q[0],0)/pts.length):0;
-  $("cval").textContent=c?`the year ${c} (mean Olympic year)`:"0 (the raw year)";
+  c=$("center").checked?1900:0;
+  $("cval").textContent=c?`the year 1900 (the starting time)`:"0 (the raw year)";
   best=fit(pts);
   const xs=pts.map(q=>q[0]), ts=pts.map(q=>q[1]);
   ext={x0:Math.min(...xs)-4,x1:Math.max(...xs)+4,t0:Math.min(...ts)-1,t1:Math.max(...ts)+1};
