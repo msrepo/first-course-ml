@@ -15,3 +15,7 @@ Notes by chapter (work in progress).
 - [Interactive: the quadratic bowl (log-likelihood surface)](chapter2-quadratic-bowl.html)
 - [Interactive: predictive error bars](chapter2-predictive-error-bars.html)
 - [Maximum likelihood for the Bernoulli parameter](chapter2-bernoulli-mle.html)
+
+## Chapter 3: The Bayesian approach
+
+- [Chapter 3 summary: the Bayesian approach](chapter3-summary.html)
