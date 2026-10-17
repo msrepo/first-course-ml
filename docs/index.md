@@ -22,3 +22,19 @@ Notes by chapter (work in progress).
 - [Interactive: the beta density](chapter3-beta-density.html)
 - [Mean and variance of a beta random variable](chapter3-beta-mean.html)
 - [Posterior with a flat prior](chapter3-posterior-flat-prior.html)
+
+## Chapter 4: Bayesian inference
+
+Notes to come.
+
+## Chapter 5: Classification
+
+Notes to come.
+
+## Chapter 6: Clustering
+
+Notes to come.
+
+## Chapter 7: Principal components analysis and latent variable models
+
+Notes to come.
