@@ -14,3 +14,4 @@ Notes by chapter (work in progress).
 - [Interactive: curvature of the likelihood (the Hessian)](chapter2-hessian.html)
 - [Interactive: the quadratic bowl (log-likelihood surface)](chapter2-quadratic-bowl.html)
 - [Interactive: predictive error bars](chapter2-predictive-error-bars.html)
+- [Maximum likelihood for the Bernoulli parameter](chapter2-bernoulli-mle.html)
