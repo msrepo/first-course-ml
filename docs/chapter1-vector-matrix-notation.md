@@ -6,16 +6,16 @@ title: Vector and matrix notation, and differentiating with it
 
 # Vector and matrix notation, and differentiating with it
 
-Chapter 1 notes. Companion to the [interactive least-squares diagram](chapter1-linear-modelling.html).
+Chapter 1 notes.
 
 ## 1. Notation
 
 A **vector** is a column of numbers. Bold lowercase letters name vectors, and a superscript $$T$$ turns a column into a row (transpose).
 
 - Parameters: $$\mathbf{w} = \begin{bmatrix} w_0 \\ w_1 \end{bmatrix}$$
-- Targets (the winning times): $$\mathbf{t} = \begin{bmatrix} t_1 \\ \vdots \\ t_N \end{bmatrix}$$
+- Targets (the values to predict): $$\mathbf{t} = \begin{bmatrix} t_1 \\ \vdots \\ t_N \end{bmatrix}$$
 
-A **matrix** is a grid of numbers. Bold uppercase letters name matrices. For the Olympic data, each row of $$\mathbf{X}$$ is one Games, written as a 1 followed by that Games' year:
+A **matrix** is a grid of numbers. Bold uppercase letters name matrices. For a straight-line model, each row of $$\mathbf{X}$$ is one data point, written as a 1 followed by its input value $$x_n$$:
 
 $$
 \mathbf{X} = \begin{bmatrix} 1 & x_1 \\ 1 & x_2 \\ \vdots & \vdots \\ 1 & x_N \end{bmatrix}
@@ -23,19 +23,19 @@ $$
 
 The column of ones is there so that $$w_0$$ has something to multiply.
 
-**Matrix times vector.** The product $$\mathbf{X}\mathbf{w}$$ is a vector with one entry per Games. Entry $$n$$ is $$w_0 + w_1 x_n$$, which is exactly the line's prediction for that year. Seen column by column, the whole output is a weighted sum of the two columns of $$\mathbf{X}$$:
+**Matrix times vector.** The product $$\mathbf{X}\mathbf{w}$$ is a vector with one entry per data point. Entry $$n$$ is $$w_0 + w_1 x_n$$, which is the model's prediction for that point. Seen column by column, the whole output is a weighted sum of the two columns of $$\mathbf{X}$$:
 
 $$
 \mathbf{X}\mathbf{w} = w_0 \begin{bmatrix} 1 \\ \vdots \\ 1 \end{bmatrix} + w_1 \begin{bmatrix} x_1 \\ \vdots \\ x_N \end{bmatrix}
 $$
 
-So moving the intercept slider adds a flat shift, and moving the slope slider adds a multiple of the year column.
+So $$w_0$$ adds a constant shift, and $$w_1$$ adds a multiple of the input column.
 
 **Inner product.** For two vectors of the same length, $$\mathbf{a}^T\mathbf{b} = \sum_n a_n b_n$$ is a single number. In particular $$\mathbf{a}^T\mathbf{a}$$ is the sum of the squares of the entries.
 
 ## 2. The loss in this notation
 
-The residual vector is $$\mathbf{t} - \mathbf{X}\mathbf{w}$$: one error per Games. The sum of squared errors is the residual's inner product with itself, so the loss in the diagram is
+The residual vector is $$\mathbf{t} - \mathbf{X}\mathbf{w}$$: one error per data point. The sum of squared errors is the residual's inner product with itself, so the average squared-error loss is
 
 $$
 L = \frac{1}{N}\,(\mathbf{t} - \mathbf{X}\mathbf{w})^T(\mathbf{t} - \mathbf{X}\mathbf{w}).
@@ -57,7 +57,7 @@ $$
 \frac{\partial f}{\partial \mathbf{w}} = \begin{bmatrix} \partial f/\partial w_0 \\ \partial f/\partial w_1 \end{bmatrix}.
 $$
 
-It points in the direction in which $$f$$ increases fastest. At a minimum it is the zero vector, which is what the green line in the diagram satisfies and a hand-placed line does not.
+It points in the direction in which $$f$$ increases fastest. At a minimum it is the zero vector.
 
 Two rules cover everything needed here. Each has a one-variable twin:
 
@@ -84,4 +84,4 @@ $$
 \widehat{\mathbf{w}} = (\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T\mathbf{t}.
 $$
 
-This one line gives the same slope and intercept as the two separate formulas for $$w_1$$ and $$w_0$$ in the diagram, and it keeps working unchanged when $$\mathbf{X}$$ has more columns (more features).
+This one line replaces the separate formulas for $$w_1$$ and $$w_0$$, and it keeps working unchanged when $$\mathbf{X}$$ has more columns (more features).
