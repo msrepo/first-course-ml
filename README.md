@@ -4,7 +4,17 @@ My own study notes and Python ports of the MATLAB examples from *A First Course 
 
 Notes are published with GitHub Pages from `docs/`.
 
+The original MATLAB code is not redistributed here; link below.
+
 The book itself is not included in this repository. Please get a copy from the publisher.
+
+## Original MATLAB code
+
+The authors' companion code (MATLAB) can be downloaded from the original source:
+
+- <https://www.dcs.gla.ac.uk/~srogers/firstcourseml/firstcoursemlcode.tar.gz>
+
+The Python scripts in `scripts/` are my own ports of those examples.
 
 ## Datasets
 
