@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 2: Predictive error bars</title>
+<style>
+:root{--bg:#fff;--fg:#1f2328;--muted:#656d76;--grid:#d8dee4;--pt:#1f6feb;--cur:#d1242f;--band:#d1242f;--card:#f6f8fa}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--grid:#30363d;--pt:#58a6ff;--cur:#ff7b72;--band:#ff7b72;--card:#161b22}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:.5rem 0}
+.card{background:var(--card);border-radius:8px;padding:12px 16px;margin:12px 0}
+.row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin:6px 0}
+.row output{font-variant-numeric:tabular-nums;min-width:7em;text-align:right}
+input[type=range]{width:100%}
+svg{width:100%;height:auto;display:block;background:var(--bg);border-radius:8px}
+.axis text{fill:var(--muted);font-size:12px}
+.grid line{stroke:var(--grid)}
+.opts{display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+select,button{font:inherit;padding:4px 10px}
+.muted{color:var(--muted);font-size:.9rem}
+.nums{display:flex;flex-wrap:wrap;gap:8px 28px}
+.nums b{font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<main>
+<h1>Predictive error bars</h1>
+<p class="muted">Chapter 2 · The fitted line is a best guess, but the data only pin down w to within some uncertainty. That uncertainty carries into predictions: for a new year x<sub>new</sub>, the prediction is ŵᵀx<sub>new</sub> with variance σ² x<sub>new</sub>ᵀ(XᵀX)⁻¹x<sub>new</sub>. The band is the prediction ± that spread.</p>
+
+<div class="card opts">
+  <label>Event <select id="ev"></select></label>
+  <label><input type="checkbox" id="noise"> Also include the observation noise σ²</label>
+  <label><input type="checkbox" id="samp"> Show lines drawn from the uncertainty in w</label>
+  <button id="resamp">Draw new lines</button>
+</div>
+
+<svg id="plot" viewBox="0 0 760 420" role="img" aria-label="Fitted polynomial with predictive error bars that widen away from the data"></svg>
+<p class="muted"><span style="color:var(--cur)">━</span> fitted prediction &nbsp; <span style="background:var(--band);opacity:.25">&nbsp;&nbsp;&nbsp;</span> ± 1 standard deviation (darker: ± 2) &nbsp; <span style="color:var(--pt)">●</span> data</p>
+
+<div class="card">
+  <div class="row"><label for="k">Polynomial order</label><input type="range" id="k" min="0" value="1" step="1"><output id="ko"></output></div>
+  <div class="row"><label for="yr">Predict for year</label><input type="range" id="yr" min="1900" max="2040" value="2016" step="1"><output id="yro"></output></div>
+</div>
+
+<div class="card nums">
+  <div>Prediction: <b id="pm"></b> s</div>
+  <div>Standard deviation: <b id="ps"></b> s</div>
+  <div>± 2 standard deviations: <b id="pr"></b></div>
+</div>
+
+<div class="card muted">
+The variance of the prediction is σ² x<sub>new</sub>ᵀ(XᵀX)⁻¹x<sub>new</sub> = x<sub>new</sub>ᵀ cov{ŵ} x<sub>new</sub>, with σ² replaced by its fitted value. It is smallest near the middle of the data and grows as you move away, because there the line could tilt a little and move the prediction a lot. Raising the polynomial order lets the fit follow the data more closely but leaves the parameters less well determined, so the band widens, especially beyond the last Olympic year.
+</div>
+</main>
+<script>
+const DATA = {"male100": [[1896.0, 12.0], [1900.0, 11.0], [1904.0, 11.0], [1906.0, 11.2], [1908.0, 10.8], [1912.0, 10.8], [1920.0, 10.8], [1924.0, 10.6], [1928.0, 10.8], [1932.0, 10.3], [1936.0, 10.3], [1948.0, 10.3], [1952.0, 10.4], [1956.0, 10.5], [1960.0, 10.2], [1964.0, 10.0], [1968.0, 9.95], [1972.0, 10.14], [1976.0, 10.06], [1980.0, 10.25], [1984.0, 9.99], [1988.0, 9.92], [1992.0, 9.96], [1996.0, 9.84], [2000.0, 9.87], [2004.0, 9.85], [2008.0, 9.69]], "female100": [[1928.0, 12.2], [1932.0, 11.9], [1936.0, 11.5], [1948.0, 11.9], [1952.0, 11.5], [1956.0, 11.5], [1960.0, 11.0], [1964.0, 11.4], [1968.0, 11.0], [1972.0, 11.07], [1976.0, 11.08], [1980.0, 11.06], [1984.0, 10.97], [1988.0, 10.54], [1992.0, 10.82], [1996.0, 10.94], [2000.0, 11.12], [2004.0, 10.93], [2008.0, 10.78]], "male200": [[1900.0, 22.2], [1904.0, 21.6], [1908.0, 22.6], [1912.0, 21.7], [1920.0, 22.0], [1924.0, 21.6], [1928.0, 21.8], [1932.0, 21.2], [1936.0, 20.7], [1948.0, 21.1], [1952.0, 20.7], [1956.0, 20.6], [1960.0, 20.5], [1964.0, 20.3], [1968.0, 19.8], [1972.0, 20.0], [1976.0, 20.23], [1980.0, 20.19], [1984.0, 19.8], [1988.0, 19.75], [1992.0, 20.01], [1996.0, 19.32], [2000.0, 20.09], [2004.0, 19.79], [2008.0, 19.3]], "female200": [[1948.0, 24.4], [1952.0, 23.7], [1956.0, 23.4], [1960.0, 24.0], [1964.0, 23.0], [1968.0, 22.5], [1972.0, 22.4], [1976.0, 22.37], [1980.0, 22.03], [1984.0, 21.81], [1988.0, 21.34], [1992.0, 21.81], [1996.0, 22.12], [2000.0, 22.27], [2004.0, 22.05], [2008.0, 21.74]], "male400": [[1896.0, 54.2], [1900.0, 49.4], [1904.0, 49.2], [1906.0, 53.2], [1908.0, 50.0], [1912.0, 48.2], [1920.0, 49.6], [1924.0, 47.6], [1928.0, 47.8], [1932.0, 46.2], [1936.0, 46.5], [1948.0, 46.2], [1952.0, 45.9], [1956.0, 46.7], [1960.0, 44.9], [1964.0, 45.1], [1968.0, 43.8], [1972.0, 44.66], [1976.0, 44.26], [1980.0, 44.6], [1984.0, 44.27], [1988.0, 43.87], [1992.0, 43.5], [1996.0, 43.49], [2000.0, 43.84], [2004.0, 44.0], [2008.0, 43.75]], "female400": [[1964.0, 52.0], [1968.0, 52.0], [1972.0, 51.08], [1976.0, 49.29], [1980.0, 48.88], [1984.0, 48.83], [1988.0, 48.65], [1992.0, 48.83], [1996.0, 48.25], [2000.0, 49.11], [2004.0, 49.41], [2008.0, 49.62]]};
+const NAMES = {male100:"Men's 100 m",female100:"Women's 100 m",male200:"Men's 200 m",female200:"Women's 200 m",male400:"Men's 400 m",female400:"Women's 400 m"};
+const $=id=>document.getElementById(id), NS="http://www.w3.org/2000/svg";
+let pts, fits, mid, half, ext, Z=[];
+const u=x=>(x-mid)/half, basis=(x,k)=>Array.from({length:k+1},(_,j)=>u(x)**j);
+const NS_=20;
+
+function inv(A){                                         // Gauss-Jordan with partial pivoting
+  const n=A.length, B=A.map((r,i)=>[...r,...Array.from({length:n},(_,j)=>+(i===j))]);
+  for(let c=0;c<n;c++){
+    let p=c; for(let r=c+1;r<n;r++) if(Math.abs(B[r][c])>Math.abs(B[p][c])) p=r; [B[c],B[p]]=[B[p],B[c]];
+    const d=B[c][c]; for(let j=0;j<2*n;j++) B[c][j]/=d;
+    for(let r=0;r<n;r++) if(r!==c){const f=B[r][c]; for(let j=0;j<2*n;j++) B[r][j]-=f*B[c][j]}
+  }
+  return B.map(r=>r.slice(n));
+}
+function chol(A){const n=A.length,L=A.map(r=>r.map(()=>0));for(let i=0;i<n;i++)for(let j=0;j<=i;j++){let s=A[i][j];for(let q=0;q<j;q++)s-=L[i][q]*L[j][q];L[i][j]=i===j?Math.sqrt(Math.max(s,1e-18)):s/L[j][j]}return L}
+function fit(k){
+  const n=pts.length, X=pts.map(p=>basis(p[0],k)), t=pts.map(p=>p[1]), m=k+1;
+  const XtX=Array.from({length:m},(_,i)=>Array.from({length:m},(_,j)=>X.reduce((a,r)=>a+r[i]*r[j],0)));
+  const Xt=Array.from({length:m},(_,i)=>X.reduce((a,r,q)=>a+r[i]*t[q],0));
+  const C=inv(XtX), w=C.map(r=>r.reduce((a,v,j)=>a+v*Xt[j],0));
+  const s2=pts.reduce((a,p,q)=>a+(t[q]-X[q].reduce((b,v,j)=>b+v*w[j],0))**2,0)/n;
+  return {k,w,C,s2,L:chol(C.map(r=>r.map(v=>v*s2)))};
+}
+const mean=(F,x)=>basis(x,F.k).reduce((a,v,j)=>a+v*F.w[j],0);
+const varf=(F,x)=>{const b=basis(x,F.k);return F.s2*b.reduce((a,bi,i)=>a+bi*F.C[i].reduce((c,v,j)=>c+v*b[j],0),0)};
+const randn=()=>Math.sqrt(-2*Math.log(1-Math.random()))*Math.cos(2*Math.PI*Math.random());
+function resample(){Z=Array.from({length:NS_},()=>Array.from({length:8},randn))}
+
+function el(n,a,p){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e}
+const M={l:56,r:16,t:16,b:40}, fmt=(v,d)=>v.toFixed(d);
+function setEvent(key){
+  pts=DATA[key]; const xs=pts.map(p=>p[0]), ts=pts.map(p=>p[1]);
+  mid=(Math.min(...xs)+2040)/2; half=(2040-Math.min(...xs))/2+1;
+  ext={x0:Math.min(...xs)-4,x1:2040,t0:Math.min(...ts)-1.5,t1:Math.max(...ts)+1.5};
+  const kmax=Math.min(6,pts.length-2); fits=Array.from({length:kmax+1},(_,k)=>fit(k));
+  $("k").max=kmax; $("k").value=Math.min(1,kmax); draw();
+}
+function draw(){
+  const k=+$("k").value, F=fits[k], inclNoise=$("noise").checked, W=760,H=420, svg=$("plot"); svg.innerHTML="";
+  const X=v=>M.l+(v-ext.x0)/(ext.x1-ext.x0)*(W-M.l-M.r), Y=v=>H-M.b-(v-ext.t0)/(ext.t1-ext.t0)*(H-M.t-M.b);
+  const defs=el("defs",{},svg), cp=el("clipPath",{id:"c"},defs); el("rect",{x:M.l,y:M.t,width:W-M.l-M.r,height:H-M.t-M.b},cp);
+  const g=el("g",{class:"grid"},svg), ax=el("g",{class:"axis"},svg), ts=(ext.t1-ext.t0)>10?2:1;
+  for(let t=Math.ceil(ext.t0/ts)*ts;t<=ext.t1;t+=ts){el("line",{x1:M.l,x2:W-M.r,y1:Y(t),y2:Y(t)},g);el("text",{x:M.l-6,y:Y(t)+4,"text-anchor":"end"},ax).textContent=t}
+  for(let x=Math.ceil(ext.x0/20)*20;x<=ext.x1;x+=20){el("line",{x1:X(x),x2:X(x),y1:M.t,y2:H-M.b},g);el("text",{x:X(x),y:H-M.b+16,"text-anchor":"middle"},ax).textContent=x}
+  el("text",{x:(W+M.l)/2,y:H-6,"text-anchor":"middle"},ax).textContent="Olympic year";
+  el("text",{transform:`translate(14 ${H/2}) rotate(-90)`,"text-anchor":"middle"},ax).textContent="Winning time (s)";
+  const sdAt=x=>Math.sqrt(varf(F,x)+(inclNoise?F.s2:0)), N=240, xsr=Array.from({length:N+1},(_,i)=>ext.x0+(ext.x1-ext.x0)*i/N);
+  const band=(m,op)=>{const up=xsr.map(x=>`${X(x).toFixed(1)} ${Y(mean(F,x)+m*sdAt(x)).toFixed(1)}`), dn=xsr.slice().reverse().map(x=>`${X(x).toFixed(1)} ${Y(mean(F,x)-m*sdAt(x)).toFixed(1)}`);
+    el("path",{d:"M"+up.join("L")+"L"+dn.join("L")+"Z",fill:"var(--band)","fill-opacity":op,stroke:"none","clip-path":"url(#c)"},svg)};
+  band(2,.12); band(1,.2);
+  if($("samp").checked) Z.forEach(z=>{const w=F.w.map((wi,i)=>wi+F.L[i].reduce((a,l,j)=>a+l*z[j],0));
+    el("path",{d:xsr.map((x,i)=>(i?"L":"M")+X(x).toFixed(1)+" "+Y(basis(x,k).reduce((a,b,j)=>a+b*w[j],0)).toFixed(1)).join(""),fill:"none",stroke:"var(--muted)","stroke-opacity":.6,"clip-path":"url(#c)"},svg)});
+  el("path",{d:xsr.map((x,i)=>(i?"L":"M")+X(x).toFixed(1)+" "+Y(mean(F,x)).toFixed(1)).join(""),fill:"none",stroke:"var(--cur)","stroke-width":2.5,"clip-path":"url(#c)"},svg);
+  pts.forEach(p=>el("circle",{cx:X(p[0]),cy:Y(p[1]),r:4,fill:"var(--pt)"},svg));
+  const yr=+$("yr").value, m=mean(F,yr), sd=sdAt(yr);
+  el("line",{x1:X(yr),x2:X(yr),y1:Y(m-2*sd),y2:Y(m+2*sd),stroke:"var(--fg)","stroke-width":2,"clip-path":"url(#c)"},svg);
+  el("circle",{cx:X(yr),cy:Math.min(H-M.b,Math.max(M.t,Y(m))),r:6,fill:"var(--cur)",stroke:"var(--bg)","stroke-width":2},svg);
+  $("ko").textContent="order "+k; $("yro").textContent=yr;
+  $("pm").textContent=fmt(m,2); $("ps").textContent=fmt(sd,3); $("pr").textContent=`${fmt(m-2*sd,2)} to ${fmt(m+2*sd,2)} s`;
+}
+for(const k in NAMES){const o=document.createElement("option");o.value=k;o.textContent=NAMES[k];$("ev").appendChild(o)}
+$("ev").onchange=e=>setEvent(e.target.value);
+["k","yr","noise","samp"].forEach(id=>$(id).addEventListener("input",draw));
+$("resamp").onclick=()=>{resample();$("samp").checked=true;draw()};
+resample(); setEvent("male100");
+</script>
+</body>
+</html>
