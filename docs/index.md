@@ -10,3 +10,4 @@ Notes by chapter (work in progress).
 ## Chapter 2: Linear modelling from a probabilistic view
 
 - [Interactive: likelihood of a Gaussian linear model](chapter2-gaussian-likelihood.html)
+- [Interactive: maximum likelihood favours complex models](chapter2-model-complexity.html)
