@@ -85,3 +85,47 @@ $$
 $$
 
 This one line replaces the separate formulas for $$w_1$$ and $$w_0$$, and it keeps working unchanged when $$\mathbf{X}$$ has more columns (more features).
+
+## 5. Weighted least squares
+
+Give each data point its own fixed weight $$\alpha_n$$, so that points with a larger weight count more:
+
+$$
+L = \frac{1}{N}\sum_{n=1}^{N} \alpha_n\,(t_n - \mathbf{x}_n^T\mathbf{w})^2 .
+$$
+
+**Matrix form.** Put the weights on the diagonal of an $$N\times N$$ matrix and zeros elsewhere, $$\mathbf{A} = \mathrm{diag}(\alpha_1,\dots,\alpha_N)$$. Then
+
+$$
+L = \frac{1}{N}\,(\mathbf{t} - \mathbf{X}\mathbf{w})^T\,\mathbf{A}\,(\mathbf{t} - \mathbf{X}\mathbf{w}).
+$$
+
+$$\mathbf{A}$$ must be a matrix, not a vector. The shapes are $$(1\times N)(N\times N)(N\times 1) = 1\times 1$$, so the loss is a single number. Because $$\mathbf{A}$$ is diagonal it multiplies each residual by its own weight and never mixes data points. It is also symmetric, which the second differentiation rule needs.
+
+**Gradient.** Write $$\mathbf{r} = \mathbf{t} - \mathbf{X}\mathbf{w}$$, so that $$L = \frac{1}{N}\mathbf{r}^T\mathbf{A}\mathbf{r}$$. The rule $$\partial(\mathbf{w}^T\mathbf{A}\mathbf{w})/\partial\mathbf{w} = 2\mathbf{A}\mathbf{w}$$ applies to a quadratic whose inside is the variable being differentiated. Here the inside is $$\mathbf{r}$$, which depends on $$\mathbf{w}$$ through $$\mathbf{r} = \mathbf{t} - \mathbf{X}\mathbf{w}$$. So:
+
+1. Differentiate with respect to $$\mathbf{r}$$: this gives $$2\mathbf{A}\mathbf{r}$$.
+2. Chain rule: multiply by how $$\mathbf{r}$$ depends on $$\mathbf{w}$$. That dependence is $$-\mathbf{X}$$, and its transpose goes on the left.
+
+$$
+\frac{\partial L}{\partial \mathbf{w}} = -\frac{2}{N}\,\mathbf{X}^T\mathbf{A}\,(\mathbf{t} - \mathbf{X}\mathbf{w}).
+$$
+
+The order is forced by the shapes: $$(D\times N)(N\times N)(N\times 1) = D\times 1$$, one entry per parameter. Writing $$\mathbf{X}^T$$ on the right of the residual would multiply $$N\times 1$$ by $$D\times N$$, which is undefined.
+
+**Solve.** Set the gradient to zero, split the bracket and move the term containing $$\mathbf{w}$$ to the other side:
+
+$$
+\mathbf{X}^T\mathbf{A}\mathbf{X}\,\mathbf{w} = \mathbf{X}^T\mathbf{A}\,\mathbf{t}
+\quad\Longrightarrow\quad
+\widehat{\mathbf{w}} = (\mathbf{X}^T\mathbf{A}\mathbf{X})^{-1}\mathbf{X}^T\mathbf{A}\,\mathbf{t}.
+$$
+
+$$\mathbf{X}^T\mathbf{A}\mathbf{X}$$ is $$D\times D$$, so this is the matrix that gets inverted.
+
+**Checks.**
+
+- $$\mathbf{A} = \mathbf{I}$$ gives back $$(\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T\mathbf{t}$$, ordinary least squares.
+- $$\mathbf{A} = c\,\mathbf{I}$$ for any constant $$c > 0$$ gives the same $$\widehat{\mathbf{w}}$$, because $$c$$ cancels between the inverse and $$\mathbf{X}^T\mathbf{A}\mathbf{t}$$. This is the same reason the $$1/N$$ factor does not move the minimiser.
+
+Written as sums, $$\mathbf{X}^T\mathbf{A}\mathbf{X} = \sum_n \alpha_n \mathbf{x}_n\mathbf{x}_n^T$$ and $$\mathbf{X}^T\mathbf{A}\mathbf{t} = \sum_n \alpha_n \mathbf{x}_n t_n$$, so a point with a larger weight pulls the fit harder.
