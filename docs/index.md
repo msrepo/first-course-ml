@@ -33,8 +33,8 @@ Notes by chapter (work in progress).
 
 ## Chapter 6: Clustering
 
-Notes to come.
+- [Chapter 6 summary: clustering](chapter6-summary.html)
 
 ## Chapter 7: Principal components analysis and latent variable models
 
-Notes to come.
+- [Chapter 7 summary: PCA and latent variable models](chapter7-summary.html)
