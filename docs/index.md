@@ -25,7 +25,7 @@ Notes by chapter (work in progress).
 
 ## Chapter 4: Bayesian inference
 
-Notes to come.
+- [Chapter 4 summary: Bayesian inference](chapter4-summary.html)
 
 ## Chapter 5: Classification
 
