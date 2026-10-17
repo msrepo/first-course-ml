@@ -29,7 +29,7 @@ Notes by chapter (work in progress).
 
 ## Chapter 5: Classification
 
-Notes to come.
+- [Chapter 5 summary: classification](chapter5-summary.html)
 
 ## Chapter 6: Clustering
 
