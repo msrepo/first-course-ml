@@ -21,3 +21,4 @@ Notes by chapter (work in progress).
 - [Chapter 3 summary: the Bayesian approach](chapter3-summary.html)
 - [Interactive: the beta density](chapter3-beta-density.html)
 - [Mean and variance of a beta random variable](chapter3-beta-mean.html)
+- [Posterior with a flat prior](chapter3-posterior-flat-prior.html)
