@@ -1,0 +1,11 @@
+# Never publish the book or its conversions
+*.pdf
+*.epub
+*.tar.gz
+A_First_Course_in_Machine_Learning*.md
+book/
+ocr/
+# Python
+__pycache__/
+.ipynb_checkpoints/
+.venv/
