@@ -28,12 +28,13 @@ button,select{font:inherit;padding:4px 10px}
 <body>
 <main>
 <h1>Linear modelling: a least-squares approach</h1>
-<p class="muted">Chapter 1 · Model: <i>t</i> = w<sub>0</sub> + w<sub>1</sub>·<i>x</i>, where <i>x</i> is the Olympic year and <i>t</i> the winning time in seconds. Move the sliders to fit a line by eye, then compare with the least-squares solution.</p>
+<p class="muted">Chapter 1 · Model: <i>t</i> = w<sub>0</sub> + w<sub>1</sub>·(<i>x</i> − <i>c</i>), where <i>x</i> is the Olympic year, <i>c</i> is <span id="cval"></span> and <i>t</i> the winning time in seconds. Move the sliders to fit a line by eye, then compare with the least-squares solution.</p>
 
 <div class="card opts">
   <label>Event <select id="ev"></select></label>
   <label><input type="checkbox" id="showBest"> Show best least-squares fit</label>
   <label><input type="checkbox" id="showRes" checked> Show residuals</label>
+  <label><input type="checkbox" id="center" checked> Centre the year (w<sub>1</sub> pivots about the middle of the data)</label>
   <button id="toBest">Set sliders to best fit</button>
 </div>
 
@@ -43,17 +44,17 @@ button,select{font:inherit;padding:4px 10px}
 <div class="card">
   <div class="row"><label for="w0">w<sub>0</sub> (intercept)</label><input type="range" id="w0"><output id="w0o"></output></div>
   <div class="row"><label for="w1">w<sub>1</sub> (slope)</label><input type="range" id="w1"><output id="w1o"></output></div>
-  <p class="muted">w<sub>0</sub> is the value at year 0, far from the data, so w<sub>0</sub> and w<sub>1</sub> trade off: a steeper slope needs a larger intercept to compensate.</p>
+  <p class="muted">w<sub>0</sub> is the predicted time at <i>x</i> = <i>c</i>; w<sub>1</sub> tilts the line about that point. Untick "Centre the year" to use the raw year as in the book (<i>c</i> = 0): then w<sub>0</sub> is the value at year 0, far off the plot, so w<sub>1</sub> appears to shift the line and the two parameters trade off.</p>
 </div>
 
 <div class="card loss">
-  <div>Your loss, L = (1/N) Σ (t<sub>n</sub> − w<sub>0</sub> − w<sub>1</sub>x<sub>n</sub>)²: <b id="Lu"></b></div>
+  <div>Your loss, L = (1/N) Σ (t<sub>n</sub> − w<sub>0</sub> − w<sub>1</sub>(x<sub>n</sub> − c))²: <b id="Lu"></b></div>
   <div id="bestBox" hidden>Best fit: w<sub>0</sub> = <b id="bw0"></b>, w<sub>1</sub> = <b id="bw1"></b>, L = <b id="Lb"></b></div>
 </div>
 
 <div class="card muted">
 The least-squares solution minimises L. Setting ∂L/∂w<sub>0</sub> = 0 and ∂L/∂w<sub>1</sub> = 0 gives
-w<sub>1</sub> = (mean(xt) − mean(x)·mean(t)) / (mean(x²) − mean(x)²) and w<sub>0</sub> = mean(t) − w<sub>1</sub>·mean(x).
+w<sub>1</sub> = (mean(xt) − mean(x)·mean(t)) / (mean(x²) − mean(x)²) and w<sub>0</sub> = mean(t) − w<sub>1</sub>·(mean(x) − c). The slope w<sub>1</sub> is the same whichever <i>c</i> you pick.
 </div>
 </main>
 <script>
@@ -62,26 +63,29 @@ const NAMES = {male100:"Men's 100 m",female100:"Women's 100 m",male200:"Men's 20
 const $ = id => document.getElementById(id);
 const NS = "http://www.w3.org/2000/svg";
 const W=760,H=420,M={l:56,r:16,t:16,b:40};
-let pts, best, ext;
+let pts, best, ext, c=0, key="male100";
 
 function fit(p){
   const n=p.length, mx=p.reduce((a,q)=>a+q[0],0)/n, mt=p.reduce((a,q)=>a+q[1],0)/n;
   const mxt=p.reduce((a,q)=>a+q[0]*q[1],0)/n, mxx=p.reduce((a,q)=>a+q[0]*q[0],0)/n;
   const w1=(mxt-mx*mt)/(mxx-mx*mx);
-  return {w0:mt-w1*mx,w1};
+  return {w0:mt-w1*(mx-c),w1};
 }
-const loss=(w0,w1)=>pts.reduce((a,q)=>a+(q[1]-w0-w1*q[0])**2,0)/pts.length;
+const loss=(w0,w1)=>pts.reduce((a,q)=>a+(q[1]-w0-w1*(q[0]-c))**2,0)/pts.length;
 const fmt=(v,d=4)=>v.toFixed(d);
 
 function setEvent(k){
-  pts=DATA[k]; best=fit(pts);
+  key=k; pts=DATA[k];
+  c=$("center").checked?Math.round(pts.reduce((a,q)=>a+q[0],0)/pts.length):0;
+  $("cval").textContent=c?`the year ${c} (mean Olympic year)`:"0 (the raw year)";
+  best=fit(pts);
   const xs=pts.map(q=>q[0]), ts=pts.map(q=>q[1]);
   ext={x0:Math.min(...xs)-4,x1:Math.max(...xs)+4,t0:Math.min(...ts)-1,t1:Math.max(...ts)+1};
   const a=Math.abs(best.w1);
   const s1=$("w1"), s0=$("w0");
   s1.min=-3*a; s1.max=3*a; s1.step=a/500;
-  s0.min=0; s0.max=Math.ceil(3*Math.abs(best.w0)); s0.step=0.05;
-  s0.value=Math.round(best.w0*0.5*20)/20; s1.value=0;   // deliberately off the optimum
+  if(c){s0.min=ext.t0; s0.max=ext.t1; s0.step=0.01; s0.value=best.w0+0.5; s1.value=0;}
+  else{s0.min=0; s0.max=Math.ceil(3*Math.abs(best.w0)); s0.step=0.05; s0.value=Math.round(best.w0*0.5*20)/20; s1.value=0;}   // deliberately off the optimum
   draw();
 }
 
@@ -90,7 +94,7 @@ const X=v=>M.l+(v-ext.x0)/(ext.x1-ext.x0)*(W-M.l-M.r);
 const Y=v=>H-M.b-(v-ext.t0)/(ext.t1-ext.t0)*(H-M.t-M.b);
 
 function line(w0,w1,color,dash){
-  el("line",{x1:X(ext.x0),y1:Y(w0+w1*ext.x0),x2:X(ext.x1),y2:Y(w0+w1*ext.x1),stroke:color,"stroke-width":2.5,"stroke-dasharray":dash||"",
+  el("line",{x1:X(ext.x0),y1:Y(w0+w1*(ext.x0-c)),x2:X(ext.x1),y2:Y(w0+w1*(ext.x1-c)),stroke:color,"stroke-width":2.5,"stroke-dasharray":dash||"",
     "clip-path":"url(#clip)"});
 }
 
@@ -113,7 +117,7 @@ function draw(){
 
   const w0=+$("w0").value, w1=+$("w1").value;
   if($("showBest").checked) line(best.w0,best.w1,"var(--best)");
-  if($("showRes").checked) pts.forEach(q=>el("line",{x1:X(q[0]),x2:X(q[0]),y1:Y(q[1]),y2:Y(w0+w1*q[0]),stroke:"var(--user)","stroke-opacity":.45,"stroke-width":1.5,"clip-path":"url(#clip)"}));
+  if($("showRes").checked) pts.forEach(q=>el("line",{x1:X(q[0]),x2:X(q[0]),y1:Y(q[1]),y2:Y(w0+w1*(q[0]-c)),stroke:"var(--user)","stroke-opacity":.45,"stroke-width":1.5,"clip-path":"url(#clip)"}));
   line(w0,w1,"var(--user)");
   pts.forEach(q=>el("circle",{cx:X(q[0]),cy:Y(q[1]),r:4,fill:"var(--pt)"}));
 
@@ -125,6 +129,7 @@ function draw(){
 
 for(const k in NAMES){const o=document.createElement("option");o.value=k;o.textContent=NAMES[k];$("ev").appendChild(o)}
 $("ev").onchange=e=>setEvent(e.target.value);
+$("center").addEventListener("input",()=>setEvent(key));
 ["w0","w1","showBest","showRes"].forEach(id=>$(id).addEventListener("input",draw));
 $("toBest").onclick=()=>{$("w0").value=best.w0;$("w1").value=best.w1;draw()};
 setEvent("male100");
