@@ -11,3 +11,4 @@ Notes by chapter (work in progress).
 
 - [Interactive: likelihood of a Gaussian linear model](chapter2-gaussian-likelihood.html)
 - [Interactive: maximum likelihood favours complex models](chapter2-model-complexity.html)
+- [Interactive: curvature of the likelihood (the Hessian)](chapter2-hessian.html)

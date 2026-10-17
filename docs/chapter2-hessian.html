@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 2: Curvature of the likelihood</title>
+<style>
+:root{--bg:#fff;--fg:#1f2328;--muted:#656d76;--grid:#d8dee4;--pt:#1f6feb;--cur:#d1242f;--best:#1a7f37;--ell:#8250df;--card:#f6f8fa}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--grid:#30363d;--pt:#58a6ff;--cur:#ff7b72;--best:#3fb950;--ell:#d2a8ff;--card:#161b22}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:.5rem 0}
+.card{background:var(--card);border-radius:8px;padding:12px 16px;margin:12px 0}
+.row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin:6px 0}
+.row output{font-variant-numeric:tabular-nums;min-width:9em;text-align:right}
+input[type=range]{width:100%}
+svg{width:100%;height:auto;display:block;background:var(--bg);border-radius:8px;touch-action:none}
+.axis text{fill:var(--muted);font-size:12px}
+.grid line{stroke:var(--grid)}
+.opts{display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+select,button{font:inherit;padding:4px 10px}
+.muted{color:var(--muted);font-size:.9rem}
+.nums{display:flex;flex-wrap:wrap;gap:10px 32px;align-items:center}
+table.m{border-collapse:collapse;font-variant-numeric:tabular-nums}
+table.m td{padding:2px 10px;text-align:right}
+table.m{border-left:2px solid var(--fg);border-right:2px solid var(--fg);border-radius:6px}
+</style>
+</head>
+<body>
+<main>
+<h1>Curvature of the likelihood: the Hessian</h1>
+<p class="muted">Chapter 2 · The log-likelihood of the Gaussian linear model is a function of (w<sub>0</sub>, w<sub>1</sub>). Its Hessian is the matrix of second derivatives, and it says how sharply the log-likelihood bends around its peak in each direction. Drag the red point in the left panel to try other parameter values.</p>
+
+<div class="card opts">
+  <label>Event <select id="ev"></select></label>
+  <label><input type="checkbox" id="c1900" checked> Count years from 1900</label>
+  <button id="reset">Move the red point to the maximum</button>
+</div>
+
+<svg id="wp" viewBox="0 0 760 420" role="img" aria-label="Contours of the log-likelihood over the two parameters"></svg>
+<p class="muted">Purple ellipses are the places where the log-likelihood has dropped by 0.5, 2 and 4.5 below its peak. The two arrows are the principal directions of the Hessian: the short arrow is the steep direction, the long arrow the flat one.</p>
+
+<div class="card">
+  <div class="row"><label for="sg">Noise σ</label><input type="range" id="sg" step="0.001"><output id="sgo"></output></div>
+</div>
+
+<div class="card nums">
+  <div>Hessian H = ∂²log L/∂w∂wᵀ:</div>
+  <table class="m"><tr><td id="h00"></td><td id="h01"></td></tr><tr><td id="h10"></td><td id="h11"></td></tr></table>
+  <div>Curvature along the principal directions (eigenvalues of −H):<br>steep <b id="e1"></b> &nbsp; flat <b id="e2"></b></div>
+</div>
+
+<svg id="dp" viewBox="0 0 760 320" role="img" aria-label="Data with the line for the red point and the maximum-likelihood line"></svg>
+<p class="muted"><span style="color:var(--best)">━</span> maximum-likelihood line &nbsp; <span style="color:var(--cur)">━</span> line for the red point &nbsp; <span style="color:var(--pt)">●</span> data</p>
+<div class="card nums"><div>log-likelihood at the red point: <b id="llr"></b></div><div>at the maximum: <b id="llm"></b></div></div>
+
+<div class="card muted">
+For this model log L(w) = const − (1/2σ²) (t − Xw)ᵀ(t − Xw). Differentiating twice gives H = −(1/σ²) XᵀX, which does not depend on w: the log-likelihood is a quadratic bowl, and every point has the same curvature. A larger noise σ makes the bowl flatter. The curvature also changes with how the inputs are laid out: with years counted from zero the bowl becomes a long, thin, tilted valley, and w<sub>0</sub> and w<sub>1</sub> can trade off against each other with almost no loss in likelihood.
+</div>
+</main>
+<script>
+const DATA = {"male100": [[1896.0, 12.0], [1900.0, 11.0], [1904.0, 11.0], [1906.0, 11.2], [1908.0, 10.8], [1912.0, 10.8], [1920.0, 10.8], [1924.0, 10.6], [1928.0, 10.8], [1932.0, 10.3], [1936.0, 10.3], [1948.0, 10.3], [1952.0, 10.4], [1956.0, 10.5], [1960.0, 10.2], [1964.0, 10.0], [1968.0, 9.95], [1972.0, 10.14], [1976.0, 10.06], [1980.0, 10.25], [1984.0, 9.99], [1988.0, 9.92], [1992.0, 9.96], [1996.0, 9.84], [2000.0, 9.87], [2004.0, 9.85], [2008.0, 9.69]], "female100": [[1928.0, 12.2], [1932.0, 11.9], [1936.0, 11.5], [1948.0, 11.9], [1952.0, 11.5], [1956.0, 11.5], [1960.0, 11.0], [1964.0, 11.4], [1968.0, 11.0], [1972.0, 11.07], [1976.0, 11.08], [1980.0, 11.06], [1984.0, 10.97], [1988.0, 10.54], [1992.0, 10.82], [1996.0, 10.94], [2000.0, 11.12], [2004.0, 10.93], [2008.0, 10.78]], "male200": [[1900.0, 22.2], [1904.0, 21.6], [1908.0, 22.6], [1912.0, 21.7], [1920.0, 22.0], [1924.0, 21.6], [1928.0, 21.8], [1932.0, 21.2], [1936.0, 20.7], [1948.0, 21.1], [1952.0, 20.7], [1956.0, 20.6], [1960.0, 20.5], [1964.0, 20.3], [1968.0, 19.8], [1972.0, 20.0], [1976.0, 20.23], [1980.0, 20.19], [1984.0, 19.8], [1988.0, 19.75], [1992.0, 20.01], [1996.0, 19.32], [2000.0, 20.09], [2004.0, 19.79], [2008.0, 19.3]], "female200": [[1948.0, 24.4], [1952.0, 23.7], [1956.0, 23.4], [1960.0, 24.0], [1964.0, 23.0], [1968.0, 22.5], [1972.0, 22.4], [1976.0, 22.37], [1980.0, 22.03], [1984.0, 21.81], [1988.0, 21.34], [1992.0, 21.81], [1996.0, 22.12], [2000.0, 22.27], [2004.0, 22.05], [2008.0, 21.74]], "male400": [[1896.0, 54.2], [1900.0, 49.4], [1904.0, 49.2], [1906.0, 53.2], [1908.0, 50.0], [1912.0, 48.2], [1920.0, 49.6], [1924.0, 47.6], [1928.0, 47.8], [1932.0, 46.2], [1936.0, 46.5], [1948.0, 46.2], [1952.0, 45.9], [1956.0, 46.7], [1960.0, 44.9], [1964.0, 45.1], [1968.0, 43.8], [1972.0, 44.66], [1976.0, 44.26], [1980.0, 44.6], [1984.0, 44.27], [1988.0, 43.87], [1992.0, 43.5], [1996.0, 43.49], [2000.0, 43.84], [2004.0, 44.0], [2008.0, 43.75]], "female400": [[1964.0, 52.0], [1968.0, 52.0], [1972.0, 51.08], [1976.0, 49.29], [1980.0, 48.88], [1984.0, 48.83], [1988.0, 48.65], [1992.0, 48.83], [1996.0, 48.25], [2000.0, 49.11], [2004.0, 49.41], [2008.0, 49.62]]};
+const NAMES = {male100:"Men's 100 m",female100:"Women's 100 m",male200:"Men's 200 m",female200:"Women's 200 m",male400:"Men's 400 m",female400:"Women's 400 m"};
+const $=id=>document.getElementById(id), NS="http://www.w3.org/2000/svg";
+let pts,c,N,Su,Suu,wh,sig0,wr,dom,ext,vx;     // wr = the red point
+function el(n,a,p){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e}
+const M={l:60,r:16,t:16,b:44}, fmt=(v,d)=>v.toFixed(d);
+const num=v=>Math.abs(v)>=1e5||(Math.abs(v)<1e-3&&v!==0)?v.toExponential(2):v.toFixed(Math.abs(v)<10?3:1);
+const f=(w,x)=>w[0]+w[1]*(x-c);
+const sse=w=>pts.reduce((a,p)=>a+(p[1]-f(w,p[0]))**2,0);
+
+function setup(key){
+  pts=DATA[key]; c=$("c1900").checked?1900:0; N=pts.length;
+  Su=pts.reduce((a,p)=>a+(p[0]-c),0); Suu=pts.reduce((a,p)=>a+(p[0]-c)**2,0);
+  const det=N*Suu-Su*Su;
+  const St=pts.reduce((a,p)=>a+p[1],0), Sut=pts.reduce((a,p)=>a+(p[0]-c)*p[1],0);
+  wh=[(Suu*St-Su*Sut)/det,(N*Sut-Su*St)/det];            // (XᵀX)⁻¹Xᵀt
+  sig0=Math.sqrt(sse(wh)/N); wr=[wh[0]+0.6*sd(0)*3,wh[1]-0.5*sd(1)*3];
+  $("sg").min=0.3*sig0; $("sg").max=3*sig0; $("sg").value=sig0;
+  const xs=pts.map(p=>p[0]), ts=pts.map(p=>p[1]);
+  ext={x0:Math.min(...xs)-4,x1:Math.max(...xs)+4,t0:Math.min(...ts)-1,t1:Math.max(...ts)+1};
+  dom=[[wh[0]-4*sd(0),wh[0]+4*sd(0)],[wh[1]-4*sd(1),wh[1]+4*sd(1)]];
+  draw();
+}
+// standard deviations of the ML estimate at the fitted σ (used only to size the plot window)
+function sd(i){const det=N*Suu-Su*Su, inv=[[Suu/det,-Su/det],[-Su/det,N/det]];return sig0*Math.sqrt(inv[i][i])}
+function hessian(s){const k=-1/(s*s);return [[k*N,k*Su],[k*Su,k*Suu]]}
+
+function draw(){
+  const s=+$("sg").value, H=hessian(s), A=[[-H[0][0],-H[0][1]],[-H[1][0],-H[1][1]]];
+  // eigen-decomposition of the symmetric 2×2 matrix −H
+  const tr=A[0][0]+A[1][1], dt=A[0][0]*A[1][1]-A[0][1]**2, disc=Math.sqrt(Math.max(tr*tr/4-dt,0));
+  const l1=tr/2+disc, l2=Math.max(tr/2-disc,1e-12);
+  const th=0.5*Math.atan2(2*A[0][1],A[0][0]-A[1][1]), v1=[Math.cos(th),Math.sin(th)], v2=[-Math.sin(th),Math.cos(th)];
+
+  // ---- parameter plane
+  const W=760,Hh=420, svg=$("wp"); svg.innerHTML="";
+  const X=v=>M.l+(v-dom[0][0])/(dom[0][1]-dom[0][0])*(W-M.l-M.r), Y=v=>Hh-M.b-(v-dom[1][0])/(dom[1][1]-dom[1][0])*(Hh-M.t-M.b);
+  const defs=el("defs",{},svg), cp=el("clipPath",{id:"cw"},defs); el("rect",{x:M.l,y:M.t,width:W-M.l-M.r,height:Hh-M.t-M.b},cp);
+  const g=el("g",{class:"grid"},svg), ax=el("g",{class:"axis"},svg);
+  for(let k=0;k<=4;k++){
+    const a=dom[0][0]+(dom[0][1]-dom[0][0])*k/4, b=dom[1][0]+(dom[1][1]-dom[1][0])*k/4;
+    el("line",{x1:X(a),x2:X(a),y1:M.t,y2:Hh-M.b},g); el("line",{x1:M.l,x2:W-M.r,y1:Y(b),y2:Y(b)},g);
+    el("text",{x:X(a),y:Hh-M.b+16,"text-anchor":"middle"},ax).textContent=fmt(a,2);
+    el("text",{x:M.l-6,y:Y(b)+4,"text-anchor":"end"},ax).textContent=b.toFixed(4);
+  }
+  el("text",{x:(W+M.l)/2,y:Hh-6,"text-anchor":"middle"},ax).textContent="w₀ (intercept)";
+  el("text",{transform:`translate(14 ${Hh/2}) rotate(-90)`,"text-anchor":"middle"},ax).textContent="w₁ (slope)";
+  const grp=el("g",{"clip-path":"url(#cw)"},svg);
+  [0.5,2,4.5].forEach((drop,i)=>{
+    const r=Math.sqrt(2*drop); let d="";
+    for(let q=0;q<=120;q++){const a=2*Math.PI*q/120, p1=r*Math.cos(a)/Math.sqrt(l1), p2=r*Math.sin(a)/Math.sqrt(l2);
+      const w0=wh[0]+p1*v1[0]+p2*v2[0], w1=wh[1]+p1*v1[1]+p2*v2[1]; d+=(q?"L":"M")+X(w0).toFixed(1)+" "+Y(w1).toFixed(1)}
+    el("path",{d:d+"Z",fill:"var(--ell)","fill-opacity":.08+.0*i,stroke:"var(--ell)","stroke-width":1.8},grp);
+  });
+  // principal-direction arrows, length 1/√λ (flat direction is long)
+  const arrow=(v,l,label)=>{const L=Math.sqrt(2*2/l);
+    const e=[wh[0]+L*v[0],wh[1]+L*v[1]], o=[wh[0]-L*v[0],wh[1]-L*v[1]];
+    el("line",{x1:X(o[0]),y1:Y(o[1]),x2:X(e[0]),y2:Y(e[1]),stroke:"var(--fg)","stroke-width":2},grp);
+    el("circle",{cx:X(e[0]),cy:Y(e[1]),r:4,fill:"var(--fg)"},grp);
+    el("text",{x:X(e[0])+6,y:Y(e[1])-6,fill:"var(--fg)","font-size":12},grp).textContent=label};
+  arrow(v1,l1,"steep"); arrow(v2,l2,"flat");
+  el("circle",{cx:X(wh[0]),cy:Y(wh[1]),r:6,fill:"var(--best)",stroke:"var(--bg)","stroke-width":2},svg);
+  const rp=el("circle",{cx:X(wr[0]),cy:Y(wr[1]),r:9,fill:"var(--cur)",stroke:"var(--bg)","stroke-width":2,style:"cursor:grab"},svg);
+  svg.onpointerdown=svg.onpointermove=ev=>{
+    if(ev.type==="pointermove"&&!(ev.buttons&1)) return;
+    const r=svg.getBoundingClientRect(), px=(ev.clientX-r.left)/r.width*W, py=(ev.clientY-r.top)/r.height*Hh;
+    wr=[dom[0][0]+(px-M.l)/(W-M.l-M.r)*(dom[0][1]-dom[0][0]), dom[1][0]+(Hh-M.b-py)/(Hh-M.t-M.b)*(dom[1][1]-dom[1][0])];
+    wr[0]=Math.min(dom[0][1],Math.max(dom[0][0],wr[0])); wr[1]=Math.min(dom[1][1],Math.max(dom[1][0],wr[1])); draw();
+  };
+
+  // ---- data panel
+  const W2=760,H2=320, d2=$("dp"); d2.innerHTML="";
+  const X2=v=>M.l+(v-ext.x0)/(ext.x1-ext.x0)*(W2-M.l-M.r), Y2=v=>H2-M.b-(v-ext.t0)/(ext.t1-ext.t0)*(H2-M.t-M.b);
+  const dd=el("defs",{},d2), cq=el("clipPath",{id:"cd"},dd); el("rect",{x:M.l,y:M.t,width:W2-M.l-M.r,height:H2-M.t-M.b},cq);
+  const g2=el("g",{class:"grid"},d2), a2=el("g",{class:"axis"},d2), ts=(ext.t1-ext.t0)>10?2:1;
+  for(let t=Math.ceil(ext.t0/ts)*ts;t<=ext.t1;t+=ts){el("line",{x1:M.l,x2:W2-M.r,y1:Y2(t),y2:Y2(t)},g2);el("text",{x:M.l-6,y:Y2(t)+4,"text-anchor":"end"},a2).textContent=t}
+  for(let x=Math.ceil(ext.x0/20)*20;x<=ext.x1;x+=20){el("line",{x1:X2(x),x2:X2(x),y1:M.t,y2:H2-M.b},g2);el("text",{x:X2(x),y:H2-M.b+16,"text-anchor":"middle"},a2).textContent=x}
+  el("text",{x:(W2+M.l)/2,y:H2-6,"text-anchor":"middle"},a2).textContent="Olympic year";
+  const ln=(w,col)=>el("line",{x1:X2(ext.x0),y1:Y2(f(w,ext.x0)),x2:X2(ext.x1),y2:Y2(f(w,ext.x1)),stroke:col,"stroke-width":2.5,"clip-path":"url(#cd)"},d2);
+  ln(wh,"var(--best)"); ln(wr,"var(--cur)");
+  pts.forEach(p=>el("circle",{cx:X2(p[0]),cy:Y2(p[1]),r:4,fill:"var(--pt)"},d2));
+
+  // ---- readouts
+  const set=(id,v)=>$(id).textContent=num(v);
+  set("h00",H[0][0]);set("h01",H[0][1]);set("h10",H[1][0]);set("h11",H[1][1]);
+  $("e1").textContent=num(l1); $("e2").textContent=num(l2);
+  const ll=w=>-N/2*Math.log(2*Math.PI*s*s)-sse(w)/(2*s*s);
+  $("llr").textContent=fmt(ll(wr),2); $("llm").textContent=fmt(ll(wh),2);
+  $("sgo").textContent="σ = "+fmt(s,3)+" (fitted "+fmt(sig0,3)+")";
+}
+for(const k in NAMES){const o=document.createElement("option");o.value=k;o.textContent=NAMES[k];$("ev").appendChild(o)}
+$("ev").onchange=e=>setup(e.target.value);
+$("c1900").addEventListener("input",()=>setup($("ev").value));
+$("sg").addEventListener("input",draw);
+$("reset").onclick=()=>{wr=[wh[0],wh[1]];draw()};
+setup("male100");
+</script>
+</body>
+</html>
