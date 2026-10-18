@@ -30,7 +30,7 @@ $$
 
 The three options: (1) find the single best $$\mathbf{w}$$, (2) approximate the posterior with a simpler density, (3) draw samples from the posterior.
 
-## Option 1: the MAP estimate
+## Option 1: the MAP estimate {#option-1-map}
 
 Maximise $$\log g(\mathbf{w})$$ (prior times likelihood). The normaliser does not depend on $$\mathbf{w}$$, so it does not affect where the maximum is. There is no closed form, so use an iterative method, **Newton–Raphson**: repeatedly move to where the local tangent (or, for a maximum, the local quadratic model) crosses zero,
 
@@ -50,7 +50,7 @@ $$\mathbf{H}$$ is negative definite for every $$\mathbf{w}$$ (because $$0<P_n<1$
 
 The decision boundary is where $$P=0.5$$, i.e. $$\hat{\mathbf{w}}^T\mathbf{x}=0$$, a straight line. The weakness: one value of $$\mathbf{w}$$ ignores the remaining uncertainty and gives **over-confident** predictions, even far from the data.
 
-## Option 2: the Laplace approximation
+## Option 2: the Laplace approximation {#option-2-laplace}
 
 Replace the posterior with a Gaussian that matches its peak and its curvature there. Expand $$\log g$$ to second order around the mode $$\hat{\mathbf{w}}$$ (the first-order term vanishes at a maximum):
 
@@ -67,7 +67,7 @@ The mean is the MAP point and the covariance is the inverse curvature. We alread
   $$\frac{1}{N_s}\sum_s \frac{1}{1+\exp(-\mathbf{w}_s^T\mathbf{x}_{\text{new}})}$$
 - Averaging over $$\mathbf{w}$$ "smudges" the decision boundary: predicted probabilities move toward 0.5 away from the data, which fixes much of the MAP over-confidence.
 
-## Option 3: sampling, Metropolis–Hastings
+## Option 3: sampling, Metropolis–Hastings {#option-3-mh}
 
 Expectations can be estimated by averaging over samples, even if the density cannot be written down. (Darts example: the chance of hitting the target is just the fraction of throws that hit it.) Metropolis–Hastings produces samples from the posterior knowing only $$g$$:
 
@@ -99,11 +99,24 @@ The chain moves uphill always and downhill sometimes, so it spends time in propo
 4. MH samples from the true posterior using only ratios of $$g$$, at extra cost and with convergence care.
 5. In every case, predictions average over parameter uncertainty (where it is kept), and the sampling-based average replaces integrals that cannot be done.
 
-## An applied example: Laplace approximation for segmentation uncertainty
+## Applied examples from the literature
 
-Zepf et al., ["Laplacian Segmentation Networks Improve Epistemic Uncertainty Quantification"](https://papers.miccai.org/miccai-2024/442-Paper1339.html) (MICCAI 2024; [arXiv](https://arxiv.org/abs/2303.13123)), apply the chapter's recipe to a medical image segmentation network. First the network is trained to a single best set of weights. This is a MAP-style solution, the point described in [Option 1: the MAP estimate](#option-1-the-map-estimate). Instead of stopping there, they treat that point as the centre of a Gaussian over the weights, using the curvature (Hessian) at the point to set its spread. That is exactly [Option 2: the Laplace approximation](#option-2-the-laplace-approximation).
+Short descriptions of papers that use the chapter's ideas on real data. Each paragraph links back to the option it illustrates.
 
-The practical difficulty is scale. In this chapter the model has two weights, so the Hessian is a 2×2 matrix that can be formed and inverted. A segmentation network has millions of weights and a prediction for every pixel, so the full Hessian cannot be built. The authors use a much cheaper structured approximation of it, designed to cope with the network's skip connections, so the Laplace recipe still works at this size.
+### MAP: a classical refinement stage ([Option 1](#option-1-map))
 
-The approximate posterior is then used the way the chapter prescribes for predictions: draw several weight vectors from the Gaussian and look at all of the resulting predictions instead of a single one. Where the sampled networks disagree about a pixel, the model does not know the answer, which is *epistemic* uncertainty. Uncertainty that comes from the data itself (*aleatoric*) is modelled separately in the network's output. The disagreement is used to flag out-of-distribution images, where an ordinary network tends to stay confidently wrong. The authors report evaluating it on three public medical segmentation datasets, with better out-of-distribution detection than MC dropout and deep ensembles.
+["Two Projections Suffice for Cerebral Vascular Reconstruction"](https://papers.miccai.org/miccai-2024/806-Paper1481.html) (MICCAI 2024) rebuilds a 3D vessel volume from only two X-ray-style views. A U-Net first gives a rough 3D estimate. Then a MAP stage takes over: the volume is adjusted iteratively until its re-projections match the two views, while a prior that favours connected vessels keeps the answer plausible. This is the chapter's recipe in miniature: a data-fit term (the likelihood) plus a prior that regularises, and the single best volume is the one that maximises their product, just as MAP trades the likelihood against the prior in Chapter 3. The scans come from public brain MRA data, but the two views are simulated projections, and the authors note there is no validation on real fluoroscopy.
 
+### MAP, then a Gaussian around it ([Option 1](#option-1-map) then [Option 2](#option-2-laplace))
+
+Wang, Wells, Golland and Zhang, ["Efficient Laplace Approximation for Bayesian Registration Uncertainty Quantification"](https://pmc.ncbi.nlm.nih.gov/articles/PMC6533616/) (MICCAI 2018), is the closest match to the chapter's structure, and it does not use deep learning. A registration warps one brain scan onto another. The method first finds the MAP deformation by minimising the negative log posterior (a matching term plus a smoothness prior). It then approximates the posterior as a Gaussian centred on that deformation, with covariance equal to the inverse Hessian. The difficulty is size: a deformation of a 3D image has far too many parameters to form the Hessian directly, so the authors work in a low-dimensional frequency representation of the deformation, where the Hessian can be handled efficiently using products with vectors. The result is a map of how uncertain the registration is at each location, tested on real OASIS brain MRI.
+
+### Laplace for neural networks, and keeping the Hessian small ([Option 2](#option-2-laplace))
+
+Zepf et al., ["Laplacian Segmentation Networks Improve Epistemic Uncertainty Quantification"](https://papers.miccai.org/miccai-2024/442-Paper1339.html) (MICCAI 2024; [arXiv](https://arxiv.org/abs/2303.13123)), apply the recipe to a medical image segmentation network. First the network is trained to a single best set of weights, the MAP-style solution of [Option 1](#option-1-map). Then they treat that point as the centre of a Gaussian over the weights, using the curvature (Hessian) at the point to set its spread, which is [Option 2](#option-2-laplace). In this chapter the model has two weights, so the Hessian is a 2×2 matrix that can be formed and inverted. A segmentation network has millions of weights and a prediction for every pixel, so the authors use a much cheaper structured approximation of the Hessian, designed to cope with the network's skip connections. The approximate posterior is then used as the chapter prescribes for predictions: draw several weight vectors from the Gaussian and look at all of the resulting predictions. Where the sampled networks disagree about a pixel, the model does not know the answer, which is *epistemic* uncertainty. Uncertainty from the data itself (*aleatoric*) is modelled separately in the network's output. The disagreement flags out-of-distribution images, where an ordinary network tends to stay confidently wrong. The authors report evaluating it on three public medical segmentation datasets, with better out-of-distribution detection than MC dropout and deep ensembles.
+
+["Last Layer Laplacian Pseudocoresets for Robust Medical Image Analysis"](https://papers.miccai.org/miccai-2025/0477-Paper2092.html) (MICCAI 2025) shrinks the problem differently: apply the Laplace approximation to the final layer only. After the network is trained, a Gaussian is placed over the last layer's weights, which are few enough for the Hessian to be handled easily, the same trick as the two-weight example in this chapter but for one layer of a network. The paper then fits a small set of pseudo-examples (a "pseudocoreset") against this posterior, aiming at robust, uncertainty-aware predictions under class imbalance without retraining the network. It is evaluated on skin-image datasets (ISIC 2019 and ASAN). A reviewer on the paper's page notes that last-layer Laplace is not new in itself and that the novelty is the pseudocoreset step.
+
+### Metropolis–Hastings for a posterior over shapes ([Option 3](#option-3-mh))
+
+Madsen et al., ["A Closest Point Proposal for MCMC-based Probabilistic Surface Registration"](https://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123620273.pdf) (ECCV 2020), is not a medical imaging paper, but it is motivated by medicine and uses CT-derived bone shapes. It treats registering one 3D surface onto another as inference: a Gaussian-process shape model is the prior, a point-distance model is the likelihood, and the resulting posterior over registrations can be evaluated up to a constant but not normalised, exactly the situation of this chapter. They sample it with Metropolis–Hastings. The standard random-walk proposal needs very long runs in high dimensions, so the paper designs an informed proposal that uses the geometry (a point on the template moves toward its closest point on the target) while staying a valid, stochastic proposal so the acceptance ratio remains well defined. The samples give an uncertainty for each point of the surface, and for completing partly missing shapes a set of posterior samples covers the ground truth better than the single most likely (MAP) shape. Data: 50 healthy femur meshes extracted from CT, and 10 face scans.
