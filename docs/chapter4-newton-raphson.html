@@ -32,7 +32,8 @@ th:first-child,td:first-child{text-align:left}
 
 <div class="card opts">
   <label><input type="radio" name="mode" value="root" checked> Find a zero of f (tangent lines)</label>
-  <label><input type="radio" name="mode" value="max"> Find the peak of log g (parabolas)</label>
+  <label><input type="radio" name="mode" value="max"> Find the peak of log g, one variable (parabolas)</label>
+  <label><input type="radio" name="mode" value="max2d"> Find the peak of log g, two variables (gradient and Hessian)</label>
   <label id="fnlab">Function <select id="fn"></select></label>
 </div>
 
@@ -40,7 +41,8 @@ th:first-child,td:first-child{text-align:left}
 <p class="muted" id="legend"></p>
 
 <div class="card">
-  <div class="row"><label for="x0">Starting guess</label><input type="range" id="x0" step="0.01"><output id="x0o"></output></div>
+  <div class="row"><label for="x0" id="x0lab">Starting guess</label><input type="range" id="x0" step="0.01"><output id="x0o"></output></div>
+  <div class="row" id="x0brow" style="display:none"><label for="x0b">Starting w₂</label><input type="range" id="x0b" step="0.01" min="-4" max="8" value="0"><output id="x0bo"></output></div>
   <div class="opts"><button id="step">Step</button><button id="run">Run 8 steps</button><button id="reset">Reset</button></div>
 </div>
 
@@ -66,6 +68,8 @@ let mode="root", fnKey="sq", xs=[];
 const cur=()=>mode==="root"?ROOT[fnKey]:{dom:[-0.5,4],x0:[-0.5,4,0.1]};
 function el(n,a,p){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e}
 function init(){
+  if(mode==="max2d"){$("x0lab").textContent="Starting w₁"; $("x0").min=-4;$("x0").max=8;$("x0").value=0; $("x0b").value=0; xs=[[+$("x0").value,+$("x0b").value]]; $("x0brow").style.display=""; draw(); return}
+  $("x0lab").textContent="Starting guess"; $("x0brow").style.display="none";
   const c=cur(); $("x0").min=c.x0[0]; $("x0").max=c.x0[1]; $("x0").value=c.x0[2]; xs=[c.x0[2]]; draw();
 }
 function next(x){
@@ -73,7 +77,69 @@ function next(x){
   return x-h1(x)/h2(x);
 }
 const M={l:56,r:16,t:16,b:40}, W=760,H=420, sci=v=>Math.abs(v)<1e-4&&v!==0?v.toExponential(2):(+v.toFixed(5)).toString();
+
+// ---- two-variable version: log g(w1,w2) for the binary data, prior variance 10
+const D2=DATA.map(p=>[p[0],p[1],p[2]]);
+const h2d=w=>-(w[0]*w[0]+w[1]*w[1])/(2*V)+D2.reduce((s,[a,b,t])=>{const p=sig(w[0]*a+w[1]*b);return s+Math.log(Math.max(t?p:1-p,1e-300))},0);
+function gradHess(w){let g=[-w[0]/V,-w[1]/V],H=[[-1/V,0],[0,-1/V]];
+  for(const [a,b,t] of D2){const p=sig(w[0]*a+w[1]*b),r=t-p,q=p*(1-p);g[0]+=a*r;g[1]+=b*r;H[0][0]-=a*a*q;H[0][1]-=a*b*q;H[1][0]-=a*b*q;H[1][1]-=b*b*q}
+  return {g,H}}
+function next2d(w){const {g,H}=gradHess(w),det=H[0][0]*H[1][1]-H[0][1]*H[1][0];
+  return [w[0]-(H[1][1]*g[0]-H[0][1]*g[1])/det, w[1]-(-H[1][0]*g[0]+H[0][0]*g[1])/det]}
+const DOM2=[-4,8], GN2=70;
+let G2=null, MAX2=null;
+function grid2(){ if(G2) return G2;
+  let w=[0,0]; for(let i=0;i<60;i++) w=next2d(w); MAX2={w,v:h2d(w)};
+  const vals=new Float64Array(GN2*GN2);
+  for(let j=0;j<GN2;j++)for(let i=0;i<GN2;i++) vals[j*GN2+i]=h2d([DOM2[0]+(i+.5)*(DOM2[1]-DOM2[0])/GN2, DOM2[0]+(j+.5)*(DOM2[1]-DOM2[0])/GN2]);
+  return G2=vals;}
+function draw2d(){
+  const svg=$("plot"); svg.innerHTML=""; const vals=grid2(), w=xs[xs.length-1];
+  const S=Math.min(W-M.l-M.r,H-M.t-M.b), ox=(W-S)/2, oy=M.t;
+  const X=v=>ox+(v-DOM2[0])/(DOM2[1]-DOM2[0])*S, Y=v=>oy+S-(v-DOM2[0])/(DOM2[1]-DOM2[0])*S;
+  const cp=el("clipPath",{id:"c"},el("defs",{},svg)); el("rect",{x:ox,y:oy,width:S,height:S},cp);
+  const g=el("g",{class:"grid"},svg), ax=el("g",{class:"axis"},svg);
+  for(let v=DOM2[0];v<=DOM2[1];v+=2){el("line",{x1:X(v),x2:X(v),y1:oy,y2:oy+S},g);el("line",{x1:ox,x2:ox+S,y1:Y(v),y2:Y(v)},g);
+    el("text",{x:X(v),y:oy+S+16,"text-anchor":"middle"},ax).textContent=v;el("text",{x:ox-6,y:Y(v)+4,"text-anchor":"end"},ax).textContent=v}
+  el("text",{x:ox+S/2,y:H-6,"text-anchor":"middle"},ax).textContent="w₁";
+  el("text",{transform:`translate(${ox-34} ${oy+S/2}) rotate(-90)`,"text-anchor":"middle"},ax).textContent="w₂";
+  const levels=[0.5,2,4.5,8,13,20].map(k=>MAX2.v-k), cell=S/GN2, toXY=(i,j)=>[ox+i*cell,oy+S-j*cell];
+  let d="";
+  for(const lev of levels){
+    for(let j=0;j<GN2-1;j++)for(let i=0;i<GN2-1;i++){
+      const v=[vals[j*GN2+i],vals[j*GN2+i+1],vals[(j+1)*GN2+i+1],vals[(j+1)*GN2+i]], pt=[[i+.5,j+.5],[i+1.5,j+.5],[i+1.5,j+1.5],[i+.5,j+1.5]], e=[];
+      for(let k=0;k<4;k++){const a=v[k],b=v[(k+1)%4]; if((a-lev)*(b-lev)<0){const f=(lev-a)/(b-a),p=pt[k],q=pt[(k+1)%4]; e.push(toXY(p[0]+f*(q[0]-p[0]),p[1]+f*(q[1]-p[1])))}}
+      if(e.length===2) d+=`M${e[0][0].toFixed(1)} ${e[0][1].toFixed(1)}L${e[1][0].toFixed(1)} ${e[1][1].toFixed(1)}`;
+      else if(e.length===4) d+=`M${e[0][0].toFixed(1)} ${e[0][1].toFixed(1)}L${e[1][0].toFixed(1)} ${e[1][1].toFixed(1)}M${e[2][0].toFixed(1)} ${e[2][1].toFixed(1)}L${e[3][0].toFixed(1)} ${e[3][1].toFixed(1)}`;
+    }
+  }
+  el("path",{d,fill:"none",stroke:"var(--curve)","stroke-width":1.6,"clip-path":"url(#c)"},svg);
+  // quadratic approximation at the current point: contours are ellipses around its own vertex
+  const {g:gr,H:Hs}=gradHess(w), wn=next2d(w), A=[[-Hs[0][0],-Hs[0][1]],[-Hs[1][0],-Hs[1][1]]];
+  const tr=A[0][0]+A[1][1], dt=A[0][0]*A[1][1]-A[0][1]**2, ds=Math.sqrt(Math.max(tr*tr/4-dt,0)), l1=tr/2+ds, l2=Math.max(tr/2-ds,1e-12);
+  const th=0.5*Math.atan2(2*A[0][1],A[0][0]-A[1][1]), v1=[Math.cos(th),Math.sin(th)], v2=[-Math.sin(th),Math.cos(th)];
+  if(l1>0&&l2>0&&isFinite(wn[0])) [0.5,2,4.5,8,13,20].forEach(k=>{let e="";const rr=Math.sqrt(2*k);
+    for(let q=0;q<=100;q++){const a=2*Math.PI*q/100,p1=rr*Math.cos(a)/Math.sqrt(l1),p2=rr*Math.sin(a)/Math.sqrt(l2);
+      e+=(q?"L":"M")+X(wn[0]+p1*v1[0]+p2*v2[0]).toFixed(1)+" "+Y(wn[1]+p1*v1[1]+p2*v2[1]).toFixed(1)}
+    el("path",{d:e,fill:"none",stroke:"var(--tan)","stroke-width":1.4,"stroke-dasharray":"5 4","clip-path":"url(#c)"},svg)});
+  // path so far, the current point, the Newton step
+  for(let i=1;i<xs.length;i++) el("line",{x1:X(xs[i-1][0]),y1:Y(xs[i-1][1]),x2:X(xs[i][0]),y2:Y(xs[i][1]),stroke:"var(--muted)","stroke-width":1.8,"clip-path":"url(#c)"},svg);
+  xs.slice(0,-1).forEach(v=>el("circle",{cx:X(v[0]),cy:Y(v[1]),r:4,fill:"var(--muted)","clip-path":"url(#c)"},svg));
+  if(isFinite(wn[0])) el("line",{x1:X(w[0]),y1:Y(w[1]),x2:X(wn[0]),y2:Y(wn[1]),stroke:"var(--ok)","stroke-width":2.2,"stroke-dasharray":"2 3","clip-path":"url(#c)"},svg);
+  el("circle",{cx:X(w[0]),cy:Y(w[1]),r:6,fill:"var(--tan)","clip-path":"url(#c)"},svg);
+  if(isFinite(wn[0])) el("circle",{cx:X(wn[0]),cy:Y(wn[1]),r:6,fill:"none",stroke:"var(--ok)","stroke-width":2.5,"clip-path":"url(#c)"},svg);
+  const mp=MAX2.w; el("path",{d:`M${X(mp[0])} ${Y(mp[1])-8}L${X(mp[0])+8} ${Y(mp[1])}L${X(mp[0])} ${Y(mp[1])+8}L${X(mp[0])-8} ${Y(mp[1])}Z`,fill:"var(--fg)","fill-opacity":.7},svg);
+  $("x0o").textContent=(+$("x0").value).toFixed(2); $("x0bo").textContent=(+$("x0b").value).toFixed(2);
+  const tb=$("tab").querySelector("tbody"); tb.innerHTML="";
+  $("c3").textContent="w₂"; $("c4").textContent="|gradient|";
+  document.querySelector("#tab thead th:nth-child(2)").textContent="w₁";
+  xs.forEach((v,i)=>{const gg=gradHess(v).g,tr=document.createElement("tr");tr.innerHTML=`<td>${i}</td><td>${sci(v[0])}</td><td>${sci(v[1])}</td><td>${sci(Math.hypot(gg[0],gg[1]))}</td>`;tb.appendChild(tr)});
+  $("legend").innerHTML='<span style="color:var(--curve)">━</span> contours of log g(w₁, w₂) (the same surface as on the worked-example page) &nbsp; <span style="color:var(--tan)">╍</span> contours of the quadratic that matches log g at the red dot (same height, gradient and Hessian) &nbsp; green ring: the top of that quadratic, the next guess &nbsp; ◆ the true peak';
+  $("expl").textContent="Each step replaces log g by the quadratic bowl defined by its gradient and Hessian at the red dot, and jumps to the bowl's top: w ← w − H⁻¹ ∇. The dashed ellipses are the bowl's contours. Because log g is concave, the bowls always open downward, and the iterates head to the single peak. Try starting far from the peak, such as (−3, −3), (−2, 2) or (4, −3): the first steps can overshoot wildly or bounce around, because far from the peak the quadratic is a poor stand-in for log g. Newton–Raphson is fast near the peak and can misbehave far from it.";
+}
+
 function draw(){
+  if(mode==="max2d"){draw2d();return}
   const svg=$("plot"); svg.innerHTML=""; const c=cur(), N=300;
   const f=mode==="root"?ROOT[fnKey].f:h, d=mode==="root"?ROOT[fnKey].d:h1;
   const dom=c.dom, xv=Array.from({length:N+1},(_,i)=>dom[0]+(dom[1]-dom[0])*i/N);
@@ -106,6 +172,7 @@ function draw(){
   // readouts
   $("x0o").textContent=(+$("x0").value).toFixed(2);
   const tb=$("tab").querySelector("tbody"); tb.innerHTML="";
+  document.querySelector("#tab thead th:nth-child(2)").textContent="x";
   if(mode==="root"){$("c3").textContent="f(x)";$("c4").textContent="f′(x)"} else {$("c3").textContent="slope of log g";$("c4").textContent="curvature of log g"}
   xs.forEach((v,i)=>{const tr=document.createElement("tr");
     tr.innerHTML=`<td>${i}</td><td>${sci(v)}</td><td>${sci(mode==="root"?ROOT[fnKey].f(v):h1(v))}</td><td>${sci(mode==="root"?ROOT[fnKey].d(v):h2(v))}</td>`;tb.appendChild(tr)});
@@ -114,10 +181,12 @@ function draw(){
     :'<span style="color:var(--curve)">━</span> log g(w), the log of prior × likelihood for one weight &nbsp; <span style="color:var(--tan)">╍</span> parabola with the same height, slope and curvature at the red dot &nbsp; green ring: the top of the parabola, the next guess';
   $("expl").textContent=mode==="root"?ROOT[fnKey].note+" Update: x ← x − f(x)/f′(x).":"Each step jumps to the top of the parabola that matches log g at the current point. Because log g is concave here (curvature below zero everywhere), the method climbs to the single peak in a few steps. Update: w ← w − (slope)/(curvature).";
 }
-$("step").onclick=()=>{const x=xs[xs.length-1], xn=next(x); if(isFinite(xn)&&xs.length<30){xs.push(xn);draw()}};
-$("run").onclick=()=>{for(let i=0;i<8;i++){const x=xs[xs.length-1],xn=next(x);if(!isFinite(xn)||xs.length>=30)break;xs.push(xn)}draw()};
-$("reset").onclick=()=>{xs=[+$("x0").value];draw()};
-$("x0").addEventListener("input",()=>{xs=[+$("x0").value];draw()});
+const nxt=x=>mode==="max2d"?next2d(x):next(x), fin=v=>Array.isArray(v)?v.every(isFinite):isFinite(v);
+$("step").onclick=()=>{const x=xs[xs.length-1], xn=nxt(x); if(fin(xn)&&xs.length<30){xs.push(xn);draw()}};
+$("run").onclick=()=>{for(let i=0;i<8;i++){const x=xs[xs.length-1],xn=nxt(x);if(!fin(xn)||xs.length>=30)break;xs.push(xn)}draw()};
+const startPt=()=>mode==="max2d"?[+$("x0").value,+$("x0b").value]:+$("x0").value;
+$("reset").onclick=()=>{xs=[startPt()];draw()};
+["x0","x0b"].forEach(id=>$(id).addEventListener("input",()=>{xs=[startPt()];draw()}));
 document.querySelectorAll("input[name=mode]").forEach(r=>r.addEventListener("input",()=>{mode=r.value;$("fnlab").style.display=mode==="root"?"":"none";init()}));
 for(const k in ROOT){const o=document.createElement("option");o.value=k;o.textContent=ROOT[k].name;$("fn").appendChild(o)}
 $("fn").onchange=e=>{fnKey=e.target.value;init()};
