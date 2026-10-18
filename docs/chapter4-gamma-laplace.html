@@ -40,9 +40,12 @@ button{font:inherit;padding:4px 10px}
 <svg id="plot" viewBox="0 0 760 400" role="img" aria-label="Gamma density with its Laplace approximation drawn as a Gaussian"></svg>
 <p class="muted"><span style="color:var(--curve)">━</span> true gamma density &nbsp; <span style="color:var(--gauss)">╍</span> Laplace Gaussian &nbsp; shaded red: the part of the Gaussian that falls below zero, where the gamma has no mass &nbsp; dotted line: the mode</p>
 
+<p class="muted">With the axes fixed, raising β squeezes the density toward zero and makes it taller. Lowering β spreads it out and flattens it, and the curve can run off the right or top edge. The mode, mean and spread all scale as 1/β.</p>
+
 <div class="card">
   <div class="row"><label for="a">α</label><input type="range" id="a" min="1.05" max="60" step="0.05" value="5"><output id="ao"></output></div>
   <div class="row"><label for="b">β</label><input type="range" id="b" min="0.1" max="5" step="0.05" value="1"><output id="bo"></output></div>
+  <label><input type="checkbox" id="lock" checked> Keep the axes fixed when β changes (they follow α only, using β = 1 as the reference)</label>
 </div>
 
 <div class="card nums">
@@ -73,27 +76,39 @@ function el(n,a,p){const e=document.createElementNS(NS,n);for(const k in a)e.set
 const M={l:56,r:16,t:16,b:40}, W=760,H=400;
 function draw(){
   const a=+$("a").value, b=+$("b").value, mode=(a-1)/b, s=Math.sqrt((a-1))/b, tm=a/b, tv=a/(b*b);
-  const hi=Math.max(tm+4*Math.sqrt(tv),mode+4*s), lo=Math.min(0,mode-4*s);
-  const N=400, xs=Array.from({length:N+1},(_,i)=>lo+(hi-lo)*i/N);
+  const N=400;
+  let hi,lo,ymax;
+  if($("lock").checked){
+    // reference axes from the beta = 1 curves, so that sliding beta squeezes or stretches the curve instead of the axis
+    const rm=a-1, rs=Math.sqrt(a-1);
+    hi=Math.max(a+4*Math.sqrt(a),rm+4*rs); lo=Math.min(0,rm-4*rs);
+    const rx=Array.from({length:N+1},(_,i)=>lo+(hi-lo)*i/N);
+    ymax=Math.max(...rx.map(y=>gam(y,a,1)),...rx.map(y=>norm(y,rm,rs)))*2.2;
+  } else {
+    hi=Math.max(tm+4*Math.sqrt(tv),mode+4*s); lo=Math.min(0,mode-4*s);
+    const fx=Array.from({length:N+1},(_,i)=>lo+(hi-lo)*i/N);
+    ymax=Math.max(...fx.map(y=>gam(y,a,b)),...fx.map(y=>norm(y,mode,s)))*1.1;
+  }
+  const xs=Array.from({length:N+1},(_,i)=>lo+(hi-lo)*i/N);
   const gy=xs.map(y=>gam(y,a,b)), ny=xs.map(y=>norm(y,mode,s));
-  const ymax=Math.max(...gy,...ny)*1.1;
   const X=v=>M.l+(v-lo)/(hi-lo)*(W-M.l-M.r), Y=v=>H-M.b-v/ymax*(H-M.t-M.b);
   const svg=$("plot"); svg.innerHTML="";
+  const clip=el("clipPath",{id:"c"},el("defs",{},svg)); el("rect",{x:M.l,y:M.t,width:W-M.l-M.r,height:H-M.t-M.b},clip);
   const g=el("g",{class:"grid"},svg), ax=el("g",{class:"axis"},svg);
   for(let k=0;k<=5;k++){const v=ymax*k/5;el("line",{x1:M.l,x2:W-M.r,y1:Y(v),y2:Y(v)},g);el("text",{x:M.l-6,y:Y(v)+4,"text-anchor":"end"},ax).textContent=v.toFixed(v<0.1?3:2)}
   for(let k=0;k<=6;k++){const v=lo+(hi-lo)*k/6;el("text",{x:X(v),y:H-M.b+16,"text-anchor":"middle"},ax).textContent=v.toFixed(Math.abs(hi-lo)>20?0:1)}
   el("text",{x:(W+M.l)/2,y:H-6,"text-anchor":"middle"},ax).textContent="y";
   el("line",{x1:X(0),x2:X(0),y1:M.t,y2:H-M.b,stroke:"var(--fg)","stroke-opacity":.4},svg);
   // shaded Gaussian mass below zero
-  if(lo<0){let d=`M${X(lo)} ${Y(0)}`; xs.forEach((y,i)=>{if(y<=0) d+=`L${X(y)} ${Y(ny[i])}`}); d+=`L${X(0)} ${Y(0)}Z`; el("path",{d,fill:"var(--gauss)","fill-opacity":.3,stroke:"none"},svg)}
+  if(lo<0){let d=`M${X(lo)} ${Y(0)}`; xs.forEach((y,i)=>{if(y<=0) d+=`L${X(y)} ${Y(ny[i])}`}); d+=`L${X(0)} ${Y(0)}Z`; el("path",{d,fill:"var(--gauss)","fill-opacity":.3,stroke:"none","clip-path":"url(#c)"},svg)}
   el("line",{x1:X(mode),x2:X(mode),y1:M.t,y2:H-M.b,stroke:"var(--muted)","stroke-dasharray":"2 4"},svg);
-  el("path",{d:xs.map((y,i)=>(i?"L":"M")+X(y).toFixed(1)+" "+Y(ny[i]).toFixed(1)).join(""),fill:"none",stroke:"var(--gauss)","stroke-width":2.5,"stroke-dasharray":"6 4"},svg);
-  el("path",{d:xs.map((y,i)=>(i?"L":"M")+X(y).toFixed(1)+" "+Y(gy[i]).toFixed(1)).join(""),fill:"none",stroke:"var(--curve)","stroke-width":2.5},svg);
+  el("path",{d:xs.map((y,i)=>(i?"L":"M")+X(y).toFixed(1)+" "+Y(ny[i]).toFixed(1)).join(""),fill:"none",stroke:"var(--gauss)","stroke-width":2.5,"stroke-dasharray":"6 4","clip-path":"url(#c)"},svg);
+  el("path",{d:xs.map((y,i)=>(i?"L":"M")+X(y).toFixed(1)+" "+Y(gy[i]).toFixed(1)).join(""),fill:"none",stroke:"var(--curve)","stroke-width":2.5,"clip-path":"url(#c)"},svg);
   $("ao").textContent=a.toFixed(2); $("bo").textContent=b.toFixed(2);
   $("mode").textContent=mode.toFixed(3); $("s2").textContent=(s*s).toFixed(3); $("tm").textContent=tm.toFixed(3); $("tv").textContent=tv.toFixed(3);
   $("neg").textContent=(100*Phi(-mode/s)).toFixed(1)+"%";
 }
-["a","b"].forEach(id=>$(id).addEventListener("input",draw));
+["a","b","lock"].forEach(id=>$(id).addEventListener("input",draw));
 document.querySelectorAll("button[data-a]").forEach(btn=>btn.onclick=()=>{$("a").value=btn.dataset.a;$("b").value=btn.dataset.b;draw()});
 draw();
 </script>
