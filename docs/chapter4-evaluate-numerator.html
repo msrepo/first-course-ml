@@ -18,6 +18,8 @@ input[type=range]{width:100%}
 svg{width:100%;height:auto;display:block;background:var(--bg);border-radius:8px}
 .axis text{fill:var(--muted);font-size:12px}
 .grid line{stroke:var(--grid)}
+canvas{width:100%;height:auto;display:block;background:var(--bg);border-radius:8px}
+.opts{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:8px 0}
 .muted{color:var(--muted);font-size:.9rem}
 table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:.9rem}
 th,td{padding:2px 8px;text-align:right}
@@ -83,6 +85,22 @@ th:first-child,td:first-child{text-align:left}
   <div>log g(w) = log-likelihood + log prior<b id="lg"></b></div>
 </div>
 <p class="muted">g(w) is proportional to the posterior density at w. It is not the posterior itself, because we have not divided by Z, the integral of g over all w, which is the part with no closed form. Try different w: g is largest near the weights that fit the data and are not too large.</p>
+
+<h2>Step 4: g(w) for every w, the unnormalised posterior</h2>
+<p class="muted">Steps 1 to 3 gave one number, g at the chosen w. Now evaluate g on a grid of all (w₁, w₂) and colour each cell by its value. The picture is the shape of the posterior, only on the wrong scale. The red dot is your chosen w, the green diamond is the peak (the MAP weights).</p>
+<div class="opts">
+  <label><input type="checkbox" id="logmode"> Colour by log g instead of g</label>
+  <label><input type="checkbox" id="contours" checked> Show contour lines</label>
+</div>
+<canvas id="post" width="760" height="460" aria-label="Heat map of the unnormalised posterior over the two weights"></canvas>
+<p class="muted">Contours are drawn at fixed fractions of the peak value (90%, 70%, 50%, 30%, 10%, 1%). The grid covers w₁ and w₂ from −6 to 10.</p>
+<div class="card big">
+  <div>g at your w, as a fraction of the peak<b id="gfrac"></b></div>
+  <div>Peak (MAP) weights<b id="mapw"></b></div>
+  <div>Z estimated by summing g over the grid<b id="zest"></b></div>
+  <div>Posterior mean from the grid<b id="pmean"></b></div>
+</div>
+<p class="muted">With two weights, summing over a grid gives rough estimates of Z and of the posterior mean. That is feasible only because there are two weights: the number of grid points needed grows exponentially with the number of weights, which is why the general case needs MAP, Laplace or sampling.</p>
 </main>
 <script>
 const DATA = [[-2.505, -2.864, 0], [-2.476, -2.377, 0], [-4.052, -1.212, 0], [-2.448, -1.702, 0], [-3.551, -2.164, 0], [-1.07, -1.393, 0], [-1.098, -0.366, 0], [-1.862, -2.623, 0], [-2.378, -3.35, 0], [-1.857, -3.162, 0], [-0.395, -2.944, 0], [-0.651, -2.671, 0], [-2.448, -1.423, 0], [-1.832, -4.086, 0], [-3.12, -1.764, 0], [-1.599, -2.778, 0], [-1.261, -0.9, 0], [-1.1, -2.856, 0], [-3.531, -1.992, 0], [-1.495, -2.938, 0], [1.318, 1.732, 1], [1.74, 2.187, 1], [1.771, 2.951, 1], [1.475, 1.209, 1], [3.128, 1.511, 1], [2.55, 4.974, 1], [3.855, 1.377, 1], [1.723, 3.92, 1], [3.067, 2.961, 1], [-0.099, 1.442, 1], [2.638, 1.893, 1], [2.371, 1.785, 1], [1.626, 2.473, 1], [2.695, 3.366, 1], [2.878, 0.362, 1], [3.034, 4.024, 1], [2.42, 2.778, 1], [2.601, 1.451, 1], [1.326, 1.874, 1], [0.905, 2.3, 1]];
@@ -94,6 +112,76 @@ const X=v=>M.l+(v-x0)/(x1-x0)*(W-M.l-M.r), Y=v=>H-M.b-(v-y0)/(y1-y0)*(H-M.t-M.b)
 const sig=z=>1/(1+Math.exp(-z));
 function el(n,a,p){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e}
 const sci=v=>v===0?"0":(Math.abs(v)<1e-3||Math.abs(v)>=1e4)?v.toExponential(3):v.toPrecision(4);
+
+// ---- Step 4: heat map of g(w) over a grid
+const GR=[-6,10], GN=96, gcache={};
+function gridFor(s2){
+  const key=s2.toFixed(2); if(gcache[key]) return gcache[key];
+  const lg=new Float64Array(GN*GN); let mx=-Infinity;
+  for(let j=0;j<GN;j++)for(let i=0;i<GN;i++){
+    const w1=GR[0]+(i+.5)*(GR[1]-GR[0])/GN, w2=GR[0]+(j+.5)*(GR[1]-GR[0])/GN;
+    let L=0; for(const [a,b,t] of DATA){const q=sig(w1*a+w2*b); L+=Math.log(Math.max(t?q:1-q,1e-300))}
+    const v=L-Math.log(2*Math.PI*s2)-(w1*w1+w2*w2)/(2*s2); lg[j*GN+i]=v; if(v>mx) mx=v;
+  }
+  return gcache[key]={lg,mx};
+}
+function mapW(s2){let w=[0,0];
+  for(let it=0;it<60;it++){let g=[-w[0]/s2,-w[1]/s2],H=[[-1/s2,0],[0,-1/s2]];
+    for(const [a,b,t] of DATA){const p=sig(w[0]*a+w[1]*b),r=t-p,q=p*(1-p);g[0]+=a*r;g[1]+=b*r;H[0][0]-=a*a*q;H[0][1]-=a*b*q;H[1][0]-=a*b*q;H[1][1]-=b*b*q}
+    const det=H[0][0]*H[1][1]-H[0][1]*H[1][0], d=[(H[1][1]*g[0]-H[0][1]*g[1])/det,(-H[1][0]*g[0]+H[0][0]*g[1])/det];
+    w=[w[0]-d[0],w[1]-d[1]]; if(Math.hypot(d[0],d[1])<1e-10)break}
+  return w}
+const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function drawPost(w,s2,llw,lpw){
+  const cv=$("post"),c=cv.getContext("2d"),CW=760,CH=460,m={l:56,r:16,t:16,b:44};
+  const {lg,mx}=gridFor(s2), logmode=$("logmode").checked;
+  const pw=CW-m.l-m.r, ph=CH-m.t-m.b, cw=pw/GN, ch=ph/GN;
+  const PXw=v=>m.l+(v-GR[0])/(GR[1]-GR[0])*pw, PYw=v=>CH-m.b-(v-GR[0])/(GR[1]-GR[0])*ph;
+  c.clearRect(0,0,CW,CH); c.fillStyle=cssv("--bg"); c.fillRect(0,0,CW,CH);
+  const accent=cssv("--c0"), fg=cssv("--fg"), muted=cssv("--muted"), gridc=cssv("--grid");
+  c.fillStyle=accent;
+  for(let j=0;j<GN;j++)for(let i=0;i<GN;i++){
+    const v=lg[j*GN+i]; const t=logmode?Math.max(0,1-(mx-v)/14):Math.exp(v-mx);
+    c.globalAlpha=Math.min(1,Math.max(0,t)); c.fillRect(m.l+i*cw,CH-m.b-(j+1)*ch,cw+.6,ch+.6);
+  }
+  c.globalAlpha=1;
+  // axes
+  c.strokeStyle=gridc; c.fillStyle=muted; c.font="12px system-ui"; c.textAlign="center";
+  for(let v=GR[0];v<=GR[1];v+=2){c.beginPath();c.moveTo(PXw(v),m.t);c.lineTo(PXw(v),CH-m.b);c.stroke();c.fillText(v,PXw(v),CH-m.b+16);
+    c.beginPath();c.moveTo(m.l,PYw(v));c.lineTo(CW-m.r,PYw(v));c.stroke();c.textAlign="right";c.fillText(v,m.l-6,PYw(v)+4);c.textAlign="center"}
+  c.fillText("w₁",CW/2,CH-6); c.save(); c.translate(14,CH/2); c.rotate(-Math.PI/2); c.fillText("w₂",0,0); c.restore();
+  // contours by marching squares at fractions of the peak
+  if($("contours").checked){
+    c.strokeStyle=fg; c.lineWidth=1.2; c.globalAlpha=.8;
+    const val=(i,j)=>Math.exp(lg[j*GN+i]-mx);
+    for(const lev of [0.9,0.7,0.5,0.3,0.1,0.01]){
+      c.beginPath();
+      for(let j=0;j<GN-1;j++)for(let i=0;i<GN-1;i++){
+        const v=[val(i,j),val(i+1,j),val(i+1,j+1),val(i,j+1)];
+        const pts=[[i+.5,j+.5],[i+1.5,j+.5],[i+1.5,j+1.5],[i+.5,j+1.5]];
+        const edges=[];
+        for(let k=0;k<4;k++){const a=v[k],b=v[(k+1)%4]; if((a-lev)*(b-lev)<0){const f=(lev-a)/(b-a),p=pts[k],q=pts[(k+1)%4]; edges.push([p[0]+f*(q[0]-p[0]),p[1]+f*(q[1]-p[1])])}}
+        const toXY=e=>[m.l+e[0]*cw,CH-m.b-e[1]*ch];
+        if(edges.length===2){const a=toXY(edges[0]),b=toXY(edges[1]);c.moveTo(a[0],a[1]);c.lineTo(b[0],b[1])}
+        else if(edges.length===4){const e=edges.map(toXY);c.moveTo(e[0][0],e[0][1]);c.lineTo(e[1][0],e[1][1]);c.moveTo(e[2][0],e[2][1]);c.lineTo(e[3][0],e[3][1])}
+      }
+      c.stroke();
+    }
+    c.globalAlpha=1;
+  }
+  // markers: MAP and chosen w
+  const mw=mapW(s2);
+  c.fillStyle=cssv("--good"); c.strokeStyle=cssv("--bg"); c.lineWidth=2;
+  c.beginPath(); c.moveTo(PXw(mw[0]),PYw(mw[1])-9);c.lineTo(PXw(mw[0])+9,PYw(mw[1]));c.lineTo(PXw(mw[0]),PYw(mw[1])+9);c.lineTo(PXw(mw[0])-9,PYw(mw[1]));c.closePath();c.fill();c.stroke();
+  c.fillStyle=cssv("--c1"); c.beginPath(); c.arc(PXw(w[0]),PYw(w[1]),7,0,7); c.fill(); c.stroke();
+  // readouts
+  const lgw=llw+lpw; $("gfrac").textContent=sci(Math.exp(lgw-mx));
+  $("mapw").textContent=`(${mw[0].toFixed(2)}, ${mw[1].toFixed(2)})`;
+  const cell=((GR[1]-GR[0])/GN)**2; let Z=0,m1=0,m2=0;
+  for(let j=0;j<GN;j++)for(let i=0;i<GN;i++){const gv=Math.exp(lg[j*GN+i]);Z+=gv*cell;m1+=gv*cell*(GR[0]+(i+.5)*(GR[1]-GR[0])/GN);m2+=gv*cell*(GR[0]+(j+.5)*(GR[1]-GR[0])/GN)}
+  $("zest").textContent=sci(Z); $("pmean").textContent=`(${(m1/Z).toFixed(2)}, ${(m2/Z).toFixed(2)})`;
+}
+
 function draw(){
   const w=[+$("w1").value,+$("w2").value], s2=+$("sg").value;
   const rows=DATA.map(([a,b,t])=>{const z=w[0]*a+w[1]*b,P=sig(z),po=t?P:1-P;return {a,b,t,z,P,po,lg:Math.log(Math.max(po,1e-300))}});
@@ -140,9 +228,10 @@ function draw(){
   $("lik").textContent=sci(lik); $("ll").textContent=ll.toFixed(3);
   $("pr").textContent=sci(pr); $("lp").textContent=lp.toFixed(3);
   $("g").textContent=sci(Math.exp(ll+lp)); $("lg").textContent=(ll+lp).toFixed(3);
+  drawPost(w,s2,ll,lp);
   $("w1o").textContent=w[0].toFixed(2); $("w2o").textContent=w[1].toFixed(2); $("sgo").textContent=s2.toFixed(1);
 }
-["w1","w2","sg"].forEach(id=>$(id).addEventListener("input",draw));
+["w1","w2","sg","logmode","contours"].forEach(id=>$(id).addEventListener("input",draw));
 draw();
 </script>
 </body>
