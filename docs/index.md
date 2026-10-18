@@ -30,6 +30,7 @@ Notes by chapter (work in progress).
 - [Interactive: evaluating the numerator of Bayes' rule at one w](chapter4-evaluate-numerator.html)
 - [The numerator of the posterior and what is intractable](chapter4-numerator-and-posterior.html)
 - [Interactive: Newton-Raphson step by step](chapter4-newton-raphson.html)
+- [Interactive: the gamma density and its Laplace approximation](chapter4-gamma-laplace.html)
 
 ## Chapter 5: Classification
 
