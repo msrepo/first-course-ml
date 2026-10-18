@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 4: Newton-Raphson</title>
+<style>
+:root{--bg:#fff;--fg:#1f2328;--muted:#656d76;--grid:#d8dee4;--curve:#1f6feb;--tan:#d1242f;--ok:#1a7f37;--card:#f6f8fa}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--grid:#30363d;--curve:#58a6ff;--tan:#ff7b72;--ok:#3fb950;--card:#161b22}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:.5rem 0}
+.card{background:var(--card);border-radius:8px;padding:12px 16px;margin:12px 0}
+.row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin:6px 0}
+.row output{font-variant-numeric:tabular-nums;min-width:5em;text-align:right}
+input[type=range]{width:100%}
+svg{width:100%;height:auto;display:block;background:var(--bg);border-radius:8px}
+.axis text{fill:var(--muted);font-size:12px}
+.grid line{stroke:var(--grid)}
+.muted{color:var(--muted);font-size:.9rem}
+.opts{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+button,select{font:inherit;padding:4px 10px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:.9rem}
+th,td{padding:2px 8px;text-align:right}th{color:var(--muted);font-weight:500}
+th:first-child,td:first-child{text-align:left}
+</style>
+</head>
+<body>
+<main>
+<h1>Newton–Raphson, step by step</h1>
+<p class="muted">Chapter 4 · The method replaces a curve by something simple at the current guess (a line, or a parabola), jumps to where that simple thing is solved, and repeats. Use <b>Step</b> to take one update at a time.</p>
+
+<div class="card opts">
+  <label><input type="radio" name="mode" value="root" checked> Find a zero of f (tangent lines)</label>
+  <label><input type="radio" name="mode" value="max"> Find the peak of log g (parabolas)</label>
+  <label id="fnlab">Function <select id="fn"></select></label>
+</div>
+
+<svg id="plot" viewBox="0 0 760 420" role="img" aria-label="Newton-Raphson iteration drawn on the curve"></svg>
+<p class="muted" id="legend"></p>
+
+<div class="card">
+  <div class="row"><label for="x0">Starting guess</label><input type="range" id="x0" step="0.01"><output id="x0o"></output></div>
+  <div class="opts"><button id="step">Step</button><button id="run">Run 8 steps</button><button id="reset">Reset</button></div>
+</div>
+
+<div class="card"><table id="tab"><thead><tr><th>n</th><th>x</th><th id="c3"></th><th id="c4"></th></tr></thead><tbody></tbody></table></div>
+<div class="card muted" id="expl"></div>
+</main>
+<script>
+const DATA = [[-2.505, -2.864, 0], [-2.476, -2.377, 0], [-4.052, -1.212, 0], [-2.448, -1.702, 0], [-3.551, -2.164, 0], [-1.07, -1.393, 0], [-1.098, -0.366, 0], [-1.862, -2.623, 0], [-2.378, -3.35, 0], [-1.857, -3.162, 0], [-0.395, -2.944, 0], [-0.651, -2.671, 0], [-2.448, -1.423, 0], [-1.832, -4.086, 0], [-3.12, -1.764, 0], [-1.599, -2.778, 0], [-1.261, -0.9, 0], [-1.1, -2.856, 0], [-3.531, -1.992, 0], [-1.495, -2.938, 0], [1.318, 1.732, 1], [1.74, 2.187, 1], [1.771, 2.951, 1], [1.475, 1.209, 1], [3.128, 1.511, 1], [2.55, 4.974, 1], [3.855, 1.377, 1], [1.723, 3.92, 1], [3.067, 2.961, 1], [-0.099, 1.442, 1], [2.638, 1.893, 1], [2.371, 1.785, 1], [1.626, 2.473, 1], [2.695, 3.366, 1], [2.878, 0.362, 1], [3.034, 4.024, 1], [2.42, 2.778, 1], [2.601, 1.451, 1], [1.326, 1.874, 1], [0.905, 2.3, 1]];
+const $=id=>document.getElementById(id), NS="http://www.w3.org/2000/svg";
+const sig=z=>1/(1+Math.exp(-z));
+// ---- functions for root finding
+const ROOT={
+ sq:{name:"f(x) = x² − 2  (zero at √2)",f:x=>x*x-2,d:x=>2*x,dom:[-0.5,3],x0:[-0.5,3,1],note:"A well-behaved curve: the number of correct digits roughly doubles with each step."},
+ cosx:{name:"f(x) = cos x − x",f:x=>Math.cos(x)-x,d:x=>-Math.sin(x)-1,dom:[-1,3],x0:[-1,3,0.2],note:"Converges quickly from most starts."},
+ cyc:{name:"f(x) = x³ − 2x + 2  (can cycle)",f:x=>x*x*x-2*x+2,d:x=>3*x*x-2,dom:[-2.5,2],x0:[-2.5,2,0],note:"Start exactly at 0 and the iterates bounce between 0 and 1 forever, never reaching the zero near −1.77. A bad starting point can defeat the method."}
+};
+// ---- 1-D log g for the maximisation view: log prior + log likelihood with one weight
+const U=DATA.map(p=>[p[0]+p[1],p[2]]), V=10;
+const h=w=>-w*w/(2*V)+U.reduce((s,[u,t])=>{const p=sig(w*u);return s+Math.log(Math.max(t?p:1-p,1e-300))},0);
+const h1=w=>-w/V+U.reduce((s,[u,t])=>s+u*(t-sig(w*u)),0);
+const h2=w=>-1/V-U.reduce((s,[u])=>{const p=sig(w*u);return s+u*u*p*(1-p)},0);
+let mode="root", fnKey="sq", xs=[];
+const cur=()=>mode==="root"?ROOT[fnKey]:{dom:[-0.5,4],x0:[-0.5,4,0.1]};
+function el(n,a,p){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e}
+function init(){
+  const c=cur(); $("x0").min=c.x0[0]; $("x0").max=c.x0[1]; $("x0").value=c.x0[2]; xs=[c.x0[2]]; draw();
+}
+function next(x){
+  if(mode==="root"){const F=ROOT[fnKey]; return x-F.f(x)/F.d(x)}
+  return x-h1(x)/h2(x);
+}
+const M={l:56,r:16,t:16,b:40}, W=760,H=420, sci=v=>Math.abs(v)<1e-4&&v!==0?v.toExponential(2):(+v.toFixed(5)).toString();
+function draw(){
+  const svg=$("plot"); svg.innerHTML=""; const c=cur(), N=300;
+  const f=mode==="root"?ROOT[fnKey].f:h, d=mode==="root"?ROOT[fnKey].d:h1;
+  const dom=c.dom, xv=Array.from({length:N+1},(_,i)=>dom[0]+(dom[1]-dom[0])*i/N);
+  let yv=xv.map(f); let lo=Math.min(...yv),hi=Math.max(...yv);
+  if(mode==="root"){lo=Math.max(lo,-6);hi=Math.min(hi,8)} else {lo=Math.max(lo,hi-40)}
+  const pad=(hi-lo)*.08; lo-=pad; hi+=pad;
+  const X=v=>M.l+(v-dom[0])/(dom[1]-dom[0])*(W-M.l-M.r), Y=v=>H-M.b-(Math.min(Math.max(v,lo),hi)-lo)/(hi-lo)*(H-M.t-M.b);
+  const cp=el("clipPath",{id:"c"},el("defs",{},svg)); el("rect",{x:M.l,y:M.t,width:W-M.l-M.r,height:H-M.t-M.b},cp);
+  const g=el("g",{class:"grid"},svg), ax=el("g",{class:"axis"},svg);
+  for(let k=0;k<=5;k++){const v=lo+(hi-lo)*k/5;el("line",{x1:M.l,x2:W-M.r,y1:Y(v),y2:Y(v)},g);el("text",{x:M.l-6,y:Y(v)+4,"text-anchor":"end"},ax).textContent=v.toFixed(Math.abs(hi-lo)>20?0:1)}
+  for(let k=0;k<=6;k++){const v=dom[0]+(dom[1]-dom[0])*k/6;el("text",{x:X(v),y:H-M.b+16,"text-anchor":"middle"},ax).textContent=v.toFixed(2)}
+  el("text",{x:(W+M.l)/2,y:H-6,"text-anchor":"middle"},ax).textContent=mode==="root"?"x":"w";
+  if(mode==="root" && lo<0&&hi>0) el("line",{x1:M.l,x2:W-M.r,y1:Y(0),y2:Y(0),stroke:"var(--fg)","stroke-opacity":.5},svg);
+  el("path",{d:xv.map((x,i)=>(i?"L":"M")+X(x).toFixed(1)+" "+Y(yv[i]).toFixed(1)).join(""),fill:"none",stroke:"var(--curve)","stroke-width":2.5,"clip-path":"url(#c)"},svg);
+  const x=xs[xs.length-1], xn=next(x);
+  if(mode==="root"){
+    const fx=f(x), s=d(x);
+    el("line",{x1:X(dom[0]),y1:Y(fx+s*(dom[0]-x)),x2:X(dom[1]),y2:Y(fx+s*(dom[1]-x)),stroke:"var(--tan)","stroke-width":2,"clip-path":"url(#c)"},svg);
+    el("line",{x1:X(x),x2:X(x),y1:Y(0),y2:Y(fx),stroke:"var(--muted)","stroke-dasharray":"4 3","clip-path":"url(#c)"},svg);
+    el("circle",{cx:X(x),cy:Y(fx),r:6,fill:"var(--tan)"},svg);
+    if(isFinite(xn)&&xn>=dom[0]&&xn<=dom[1]) el("circle",{cx:X(xn),cy:Y(0),r:6,fill:"none",stroke:"var(--ok)","stroke-width":2.5},svg);
+  } else {
+    const hx=h(x),g1=h1(x),g2=h2(x), q=t=>hx+g1*(t-x)+0.5*g2*(t-x)*(t-x);
+    el("path",{d:xv.map((t,i)=>(i?"L":"M")+X(t).toFixed(1)+" "+Y(q(t)).toFixed(1)).join(""),fill:"none",stroke:"var(--tan)","stroke-width":2,"stroke-dasharray":"6 4","clip-path":"url(#c)"},svg);
+    el("circle",{cx:X(x),cy:Y(hx),r:6,fill:"var(--tan)"},svg);
+    if(isFinite(xn)&&xn>=dom[0]&&xn<=dom[1]){el("line",{x1:X(xn),x2:X(xn),y1:Y(lo),y2:Y(q(xn)),stroke:"var(--ok)","stroke-dasharray":"4 3"},svg);el("circle",{cx:X(xn),cy:Y(q(xn)),r:6,fill:"none",stroke:"var(--ok)","stroke-width":2.5},svg)}
+  }
+  // previous iterates along the axis
+  xs.slice(0,-1).forEach(v=>el("circle",{cx:X(v),cy:Y(mode==="root"?0:lo+pad),r:4,fill:"var(--muted)"},svg));
+  // readouts
+  $("x0o").textContent=(+$("x0").value).toFixed(2);
+  const tb=$("tab").querySelector("tbody"); tb.innerHTML="";
+  if(mode==="root"){$("c3").textContent="f(x)";$("c4").textContent="f′(x)"} else {$("c3").textContent="slope of log g";$("c4").textContent="curvature of log g"}
+  xs.forEach((v,i)=>{const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${i}</td><td>${sci(v)}</td><td>${sci(mode==="root"?ROOT[fnKey].f(v):h1(v))}</td><td>${sci(mode==="root"?ROOT[fnKey].d(v):h2(v))}</td>`;tb.appendChild(tr)});
+  $("legend").innerHTML=mode==="root"
+    ?'<span style="color:var(--curve)">━</span> curve f &nbsp; <span style="color:var(--tan)">━</span> tangent at the current guess (red dot) &nbsp; green ring: where the tangent crosses zero, the next guess &nbsp; grey dots: earlier guesses'
+    :'<span style="color:var(--curve)">━</span> log g(w), the log of prior × likelihood for one weight &nbsp; <span style="color:var(--tan)">╍</span> parabola with the same height, slope and curvature at the red dot &nbsp; green ring: the top of the parabola, the next guess';
+  $("expl").textContent=mode==="root"?ROOT[fnKey].note+" Update: x ← x − f(x)/f′(x).":"Each step jumps to the top of the parabola that matches log g at the current point. Because log g is concave here (curvature below zero everywhere), the method climbs to the single peak in a few steps. Update: w ← w − (slope)/(curvature).";
+}
+$("step").onclick=()=>{const x=xs[xs.length-1], xn=next(x); if(isFinite(xn)&&xs.length<30){xs.push(xn);draw()}};
+$("run").onclick=()=>{for(let i=0;i<8;i++){const x=xs[xs.length-1],xn=next(x);if(!isFinite(xn)||xs.length>=30)break;xs.push(xn)}draw()};
+$("reset").onclick=()=>{xs=[+$("x0").value];draw()};
+$("x0").addEventListener("input",()=>{xs=[+$("x0").value];draw()});
+document.querySelectorAll("input[name=mode]").forEach(r=>r.addEventListener("input",()=>{mode=r.value;$("fnlab").style.display=mode==="root"?"":"none";init()}));
+for(const k in ROOT){const o=document.createElement("option");o.value=k;o.textContent=ROOT[k].name;$("fn").appendChild(o)}
+$("fn").onchange=e=>{fnKey=e.target.value;init()};
+init();
+</script>
+</body>
+</html>
