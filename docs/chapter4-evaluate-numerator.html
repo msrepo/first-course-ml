@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 4: Evaluating the numerator</title>
+<style>
+:root{--bg:#fff;--fg:#1f2328;--muted:#656d76;--grid:#d8dee4;--good:#1a7f37;--bad:#d1242f;--c0:#1f6feb;--c1:#d1242f;--card:#f6f8fa}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--grid:#30363d;--good:#3fb950;--bad:#ff7b72;--c0:#58a6ff;--c1:#ff7b72;--card:#161b22}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:.5rem 0}
+h2{font-size:1.1rem;margin:1rem 0 .3rem}
+.card{background:var(--card);border-radius:8px;padding:12px 16px;margin:12px 0}
+.row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin:6px 0}
+.row output{font-variant-numeric:tabular-nums;min-width:5em;text-align:right}
+input[type=range]{width:100%}
+svg{width:100%;height:auto;display:block;background:var(--bg);border-radius:8px}
+.axis text{fill:var(--muted);font-size:12px}
+.grid line{stroke:var(--grid)}
+.muted{color:var(--muted);font-size:.9rem}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:.9rem}
+th,td{padding:2px 8px;text-align:right}
+th{color:var(--muted);font-weight:500;position:sticky;top:0;background:var(--card)}
+th:first-child,td:first-child{text-align:left}
+.scroll{max-height:320px;overflow:auto;border-radius:6px}
+.big{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 16px}
+.big div{background:var(--bg);border-radius:8px;padding:8px 12px}
+.big b{display:block;font-size:1.25rem;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<main>
+<h1>Evaluating the numerator of Bayes' rule at one w</h1>
+<p class="muted">Chapter 4 · For the binary dataset, pick a weight vector w and compute g(w) = likelihood × prior, the numerator of the posterior. Each point gets the probability the model assigns to its <i>observed</i> label, and the likelihood is the product of those 40 numbers.</p>
+
+<div class="card">
+  <div class="row"><label for="w1">w₁</label><input type="range" id="w1" min="-4" max="4" step="0.05" value="1"><output id="w1o"></output></div>
+  <div class="row"><label for="w2">w₂</label><input type="range" id="w2" min="-4" max="4" step="0.05" value="2"><output id="w2o"></output></div>
+  <div class="row"><label for="sg">Prior variance σ²</label><input type="range" id="sg" min="0.5" max="50" step="0.5" value="10"><output id="sgo"></output></div>
+</div>
+
+<svg id="plot" viewBox="0 0 760 420" role="img" aria-label="Data points coloured by the probability the model gives to their observed label"></svg>
+<p class="muted">Each point is coloured by P(observed label): <span style="color:var(--good)">green</span> when the model gives it high probability, <span style="color:var(--bad)">red</span> when low. The line is the boundary wᵀx = 0.</p>
+
+<h2>Step 1: the likelihood</h2>
+<p class="muted">For each point: z = wᵀx, then P = 1/(1 + e<sup>−z</sup>) is the probability of label 1, and the factor used in the likelihood is P if t = 1 and 1 − P if t = 0.</p>
+<div class="card scroll"><table id="tab"><thead><tr><th>#</th><th>x₁</th><th>x₂</th><th>t</th><th>z = wᵀx</th><th>P(t=1)</th><th>P(observed t)</th><th>log</th></tr></thead><tbody></tbody></table></div>
+
+<div class="card big">
+  <div>Likelihood = product of the last-but-one column<b id="lik"></b></div>
+  <div>log-likelihood = sum of the logs<b id="ll"></b></div>
+</div>
+<p class="muted">The product of 40 numbers below 1 can get extremely small, so in practice we add logs instead of multiplying probabilities.</p>
+
+<h2>Step 2: the prior</h2>
+<p class="muted">Two weights, so D = 2 and p(w) = (2πσ²)<sup>−1</sup> exp(−wᵀw / (2σ²)).</p>
+<div class="card big">
+  <div>Prior density at w<b id="pr"></b></div>
+  <div>log prior<b id="lp"></b></div>
+</div>
+
+<h2>Step 3: multiply (or add the logs)</h2>
+<div class="card big">
+  <div>g(w) = likelihood × prior<b id="g"></b></div>
+  <div>log g(w) = log-likelihood + log prior<b id="lg"></b></div>
+</div>
+<p class="muted">g(w) is proportional to the posterior density at w. It is not the posterior itself, because we have not divided by Z, the integral of g over all w, which is the part with no closed form. Try different w: g is largest near the weights that fit the data and are not too large.</p>
+</main>
+<script>
+const DATA = [[-2.505, -2.864, 0], [-2.476, -2.377, 0], [-4.052, -1.212, 0], [-2.448, -1.702, 0], [-3.551, -2.164, 0], [-1.07, -1.393, 0], [-1.098, -0.366, 0], [-1.862, -2.623, 0], [-2.378, -3.35, 0], [-1.857, -3.162, 0], [-0.395, -2.944, 0], [-0.651, -2.671, 0], [-2.448, -1.423, 0], [-1.832, -4.086, 0], [-3.12, -1.764, 0], [-1.599, -2.778, 0], [-1.261, -0.9, 0], [-1.1, -2.856, 0], [-3.531, -1.992, 0], [-1.495, -2.938, 0], [1.318, 1.732, 1], [1.74, 2.187, 1], [1.771, 2.951, 1], [1.475, 1.209, 1], [3.128, 1.511, 1], [2.55, 4.974, 1], [3.855, 1.377, 1], [1.723, 3.92, 1], [3.067, 2.961, 1], [-0.099, 1.442, 1], [2.638, 1.893, 1], [2.371, 1.785, 1], [1.626, 2.473, 1], [2.695, 3.366, 1], [2.878, 0.362, 1], [3.034, 4.024, 1], [2.42, 2.778, 1], [2.601, 1.451, 1], [1.326, 1.874, 1], [0.905, 2.3, 1]];
+const $=id=>document.getElementById(id), NS="http://www.w3.org/2000/svg";
+const W=760,H=420,M={l:56,r:16,t:16,b:44};
+const xs=DATA.map(p=>p[0]), ys=DATA.map(p=>p[1]);
+const x0=Math.floor(Math.min(...xs))-1, x1=Math.ceil(Math.max(...xs))+1, y0=Math.floor(Math.min(...ys))-1, y1=Math.ceil(Math.max(...ys))+1;
+const X=v=>M.l+(v-x0)/(x1-x0)*(W-M.l-M.r), Y=v=>H-M.b-(v-y0)/(y1-y0)*(H-M.t-M.b);
+const sig=z=>1/(1+Math.exp(-z));
+function el(n,a,p){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e}
+const sci=v=>v===0?"0":(Math.abs(v)<1e-3||Math.abs(v)>=1e4)?v.toExponential(3):v.toPrecision(4);
+function draw(){
+  const w=[+$("w1").value,+$("w2").value], s2=+$("sg").value;
+  const rows=DATA.map(([a,b,t])=>{const z=w[0]*a+w[1]*b,P=sig(z),po=t?P:1-P;return {a,b,t,z,P,po,lg:Math.log(Math.max(po,1e-300))}});
+  const ll=rows.reduce((s,r)=>s+r.lg,0), lik=Math.exp(ll);
+  const lp=-Math.log(2*Math.PI*s2)-(w[0]*w[0]+w[1]*w[1])/(2*s2), pr=Math.exp(lp);
+
+  const svg=$("plot"); svg.innerHTML="";
+  const cp=el("clipPath",{id:"c"},el("defs",{},svg)); el("rect",{x:M.l,y:M.t,width:W-M.l-M.r,height:H-M.t-M.b},cp);
+  const g=el("g",{class:"grid"},svg), ax=el("g",{class:"axis"},svg);
+  for(let v=Math.ceil(x0);v<=x1;v+=2){el("line",{x1:X(v),x2:X(v),y1:M.t,y2:H-M.b},g);el("text",{x:X(v),y:H-M.b+16,"text-anchor":"middle"},ax).textContent=v}
+  for(let v=Math.ceil(y0);v<=y1;v+=2){el("line",{x1:M.l,x2:W-M.r,y1:Y(v),y2:Y(v)},g);el("text",{x:M.l-6,y:Y(v)+4,"text-anchor":"end"},ax).textContent=v}
+  el("text",{x:(W+M.l)/2,y:H-6,"text-anchor":"middle"},ax).textContent="x₁";
+  el("text",{transform:`translate(14 ${H/2}) rotate(-90)`,"text-anchor":"middle"},ax).textContent="x₂";
+  let p1,p2; if(Math.abs(w[1])<1e-9){p1=[0,y0];p2=[0,y1]} else {p1=[x0,-w[0]*x0/w[1]];p2=[x1,-w[0]*x1/w[1]]}
+  el("line",{x1:X(p1[0]),y1:Y(p1[1]),x2:X(p2[0]),y2:Y(p2[1]),stroke:"var(--fg)","stroke-width":2.5,"clip-path":"url(#c)"},svg);
+  rows.forEach(r=>{const good=r.po, col=`color-mix(in srgb, var(--good) ${Math.round(good*100)}%, var(--bad))`;
+    const size=5+8*(1-good);
+    r.t?el("rect",{x:X(r.a)-6,y:Y(r.b)-6,width:12,height:12,fill:col,stroke:"var(--bg)","stroke-width":1.5},svg)
+       :el("circle",{cx:X(r.a),cy:Y(r.b),r:7,fill:col,stroke:"var(--bg)","stroke-width":1.5},svg)});
+
+  const tb=$("tab").querySelector("tbody"); tb.innerHTML="";
+  rows.forEach((r,i)=>{const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${i+1}</td><td>${r.a.toFixed(2)}</td><td>${r.b.toFixed(2)}</td><td>${r.t}</td><td>${r.z.toFixed(2)}</td><td>${r.P.toFixed(3)}</td><td>${r.po.toFixed(3)}</td><td>${r.lg.toFixed(3)}</td>`;tb.appendChild(tr)});
+  $("lik").textContent=sci(lik); $("ll").textContent=ll.toFixed(3);
+  $("pr").textContent=sci(pr); $("lp").textContent=lp.toFixed(3);
+  $("g").textContent=sci(Math.exp(ll+lp)); $("lg").textContent=(ll+lp).toFixed(3);
+  $("w1o").textContent=w[0].toFixed(2); $("w2o").textContent=w[1].toFixed(2); $("sgo").textContent=s2.toFixed(1);
+}
+["w1","w2","sg"].forEach(id=>$(id).addEventListener("input",draw));
+draw();
+</script>
+</body>
+</html>
