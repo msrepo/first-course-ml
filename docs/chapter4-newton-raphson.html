@@ -80,7 +80,7 @@ function draw(){
   let yv=xv.map(f); let lo=Math.min(...yv),hi=Math.max(...yv);
   if(mode==="root"){lo=Math.max(lo,-6);hi=Math.min(hi,8)} else {lo=Math.max(lo,hi-40)}
   const pad=(hi-lo)*.08; lo-=pad; hi+=pad;
-  const X=v=>M.l+(v-dom[0])/(dom[1]-dom[0])*(W-M.l-M.r), Y=v=>H-M.b-(Math.min(Math.max(v,lo),hi)-lo)/(hi-lo)*(H-M.t-M.b);
+  const X=v=>M.l+(v-dom[0])/(dom[1]-dom[0])*(W-M.l-M.r), Y=v=>H-M.b-(v-lo)/(hi-lo)*(H-M.t-M.b), Yc=v=>Y(Math.min(Math.max(v,lo),hi));
   const cp=el("clipPath",{id:"c"},el("defs",{},svg)); el("rect",{x:M.l,y:M.t,width:W-M.l-M.r,height:H-M.t-M.b},cp);
   const g=el("g",{class:"grid"},svg), ax=el("g",{class:"axis"},svg);
   for(let k=0;k<=5;k++){const v=lo+(hi-lo)*k/5;el("line",{x1:M.l,x2:W-M.r,y1:Y(v),y2:Y(v)},g);el("text",{x:M.l-6,y:Y(v)+4,"text-anchor":"end"},ax).textContent=v.toFixed(Math.abs(hi-lo)>20?0:1)}
@@ -93,16 +93,16 @@ function draw(){
     const fx=f(x), s=d(x);
     el("line",{x1:X(dom[0]),y1:Y(fx+s*(dom[0]-x)),x2:X(dom[1]),y2:Y(fx+s*(dom[1]-x)),stroke:"var(--tan)","stroke-width":2,"clip-path":"url(#c)"},svg);
     el("line",{x1:X(x),x2:X(x),y1:Y(0),y2:Y(fx),stroke:"var(--muted)","stroke-dasharray":"4 3","clip-path":"url(#c)"},svg);
-    el("circle",{cx:X(x),cy:Y(fx),r:6,fill:"var(--tan)"},svg);
-    if(isFinite(xn)&&xn>=dom[0]&&xn<=dom[1]) el("circle",{cx:X(xn),cy:Y(0),r:6,fill:"none",stroke:"var(--ok)","stroke-width":2.5},svg);
+    el("circle",{cx:X(x),cy:Yc(fx),r:6,fill:"var(--tan)"},svg);
+    if(isFinite(xn)&&xn>=dom[0]&&xn<=dom[1]) el("circle",{cx:X(xn),cy:Yc(0),r:6,fill:"none",stroke:"var(--ok)","stroke-width":2.5},svg);
   } else {
     const hx=h(x),g1=h1(x),g2=h2(x), q=t=>hx+g1*(t-x)+0.5*g2*(t-x)*(t-x);
     el("path",{d:xv.map((t,i)=>(i?"L":"M")+X(t).toFixed(1)+" "+Y(q(t)).toFixed(1)).join(""),fill:"none",stroke:"var(--tan)","stroke-width":2,"stroke-dasharray":"6 4","clip-path":"url(#c)"},svg);
-    el("circle",{cx:X(x),cy:Y(hx),r:6,fill:"var(--tan)"},svg);
-    if(isFinite(xn)&&xn>=dom[0]&&xn<=dom[1]){el("line",{x1:X(xn),x2:X(xn),y1:Y(lo),y2:Y(q(xn)),stroke:"var(--ok)","stroke-dasharray":"4 3"},svg);el("circle",{cx:X(xn),cy:Y(q(xn)),r:6,fill:"none",stroke:"var(--ok)","stroke-width":2.5},svg)}
+    el("circle",{cx:X(x),cy:Yc(hx),r:6,fill:"var(--tan)"},svg);
+    if(isFinite(xn)&&xn>=dom[0]&&xn<=dom[1]){el("line",{x1:X(xn),x2:X(xn),y1:Y(lo),y2:Y(q(xn)),stroke:"var(--ok)","stroke-dasharray":"4 3"},svg);el("circle",{cx:X(xn),cy:Yc(q(xn)),r:6,fill:"none",stroke:"var(--ok)","stroke-width":2.5},svg)}
   }
   // previous iterates along the axis
-  xs.slice(0,-1).forEach(v=>el("circle",{cx:X(v),cy:Y(mode==="root"?0:lo+pad),r:4,fill:"var(--muted)"},svg));
+  xs.slice(0,-1).forEach(v=>el("circle",{cx:X(v),cy:Yc(mode==="root"?0:lo+pad),r:4,fill:"var(--muted)"},svg));
   // readouts
   $("x0o").textContent=(+$("x0").value).toFixed(2);
   const tb=$("tab").querySelector("tbody"); tb.innerHTML="";
