@@ -28,6 +28,7 @@ Notes by chapter (work in progress).
 - [Chapter 4 summary: Bayesian inference](chapter4-summary.html)
 - [Interactive: the binary response dataset](chapter4-binary-data.html)
 - [Interactive: evaluating the numerator of Bayes' rule at one w](chapter4-evaluate-numerator.html)
+- [The numerator of the posterior and what is intractable](chapter4-numerator-and-posterior.html)
 
 ## Chapter 5: Classification
 
