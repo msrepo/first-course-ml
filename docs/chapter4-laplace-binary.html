@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 4: Laplace approximation for the binary model</title>
+<style>
+:root{--bg:#fff;--fg:#1f2328;--muted:#656d76;--grid:#d8dee4;--c0:#1f6feb;--c1:#d1242f;--map:#1a7f37;--card:#f6f8fa}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--grid:#30363d;--c0:#58a6ff;--c1:#ff7b72;--map:#3fb950;--card:#161b22}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:.5rem 0}
+h2{font-size:1.1rem;margin:1.2rem 0 .3rem}
+.card{background:var(--card);border-radius:8px;padding:12px 16px;margin:12px 0}
+.row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin:6px 0}
+.row output{font-variant-numeric:tabular-nums;min-width:4.5em;text-align:right}
+input[type=range]{width:100%}
+svg{width:100%;height:auto;display:block;background:var(--bg);border-radius:8px}
+.axis text{fill:var(--muted);font-size:12px}
+.grid line{stroke:var(--grid)}
+.muted{color:var(--muted);font-size:.9rem}
+.opts{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+button{font:inherit;padding:4px 10px}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.cols{grid-template-columns:minmax(0,1fr)}}
+.nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 16px}
+.nums div{background:var(--bg);border-radius:8px;padding:8px 12px}
+.nums b{display:block;font-size:1.25rem;font-variant-numeric:tabular-nums}
+.sticky{position:sticky;top:0;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+</style>
+</head>
+<body>
+<main>
+<h1>Laplace approximation for the binary response model</h1>
+<p class="muted">Chapter 4 · The posterior over the two weights, g(w) / Z, has no standard form. The Laplace approximation replaces it by a Gaussian centred at its peak (the MAP weights, found by Newton–Raphson) with covariance Σ = −H⁻¹, the inverse curvature at that peak. Samples from the Gaussian then give a fan of decision boundaries and an averaged prediction.</p>
+
+<div class="card sticky">
+  <div class="row"><label for="sg">Prior variance σ²</label><input type="range" id="sg" min="0.5" max="50" step="0.5" value="10"><output id="sgo"></output></div>
+  <div class="row"><label for="t1">Test point x₁</label><input type="range" id="t1" min="-5" max="5" step="0.1" value="-3"><output id="t1o"></output></div>
+  <div class="row"><label for="t2">Test point x₂</label><input type="range" id="t2" min="-5" max="6" step="0.1" value="5"><output id="t2o"></output></div>
+  <div class="opts"><button id="resample">Draw new weight samples</button><span class="muted">20 samples are drawn for the plots, and 1000 for the averaged prediction.</span></div>
+</div>
+
+<h2>Step 1: the posterior over the weights and its Gaussian stand-in</h2>
+<svg id="wsp" viewBox="0 0 760 460" role="img" aria-label="Contours of the unnormalised posterior over the two weights, with the Laplace Gaussian ellipses and sampled weights"></svg>
+<p class="muted"><span style="color:var(--c0)">━</span> contours of the true unnormalised posterior g(w) &nbsp; <span style="color:var(--c1)">╍</span> contours of the Laplace Gaussian N(ŵ, −H⁻¹) at the same drops in log height below each peak (0.5, 2, 4.5, 8) &nbsp; <span style="color:var(--map)">◆</span> ŵ, the MAP weights &nbsp; grey dots: 20 sampled weight vectors. Near the peak the two agree. Further out, g is lopsided and the symmetric Gaussian is not.</p>
+<div class="card nums">
+  <div>MAP weights ŵ<b id="mapw"></b></div>
+  <div>Curvature −H at the peak<b id="hess"></b></div>
+  <div>Posterior covariance Σ = −H⁻¹<b id="cov"></b></div>
+  <div>Posterior std of w₁, w₂<b id="sds"></b></div>
+</div>
+
+<h2>Step 2: each sampled weight vector is a decision boundary</h2>
+<svg id="dsp" viewBox="0 0 760 420" role="img" aria-label="Data with the decision boundaries from sampled weights"></svg>
+<p class="muted">Each grey line is the boundary wᵀx = 0 for one sampled w (the 20 grey dots above). The green line is the MAP boundary. Where the grey lines fan out, the model is unsure which side a point belongs to. The red cross is your test point.</p>
+
+<h2>Step 3: predictions, a single weight vector against an average over the posterior</h2>
+<div class="cols">
+  <div><svg id="pmap" viewBox="0 0 380 300" role="img" aria-label="Probability of class 1 from the MAP weights"></svg><p class="muted" style="text-align:center">Using only the MAP weights: P(t = 1 | x, ŵ)</p></div>
+  <div><svg id="pavg" viewBox="0 0 380 300" role="img" aria-label="Probability of class 1 averaged over samples from the Laplace posterior"></svg><p class="muted" style="text-align:center">Averaged over 1000 posterior samples</p></div>
+</div>
+<p class="muted">Blue means P(t = 1) near 0, red means near 1, white means near 0.5. The red cross is your test point.</p>
+<div class="card nums">
+  <div>P(t = 1) at the test point, MAP weights only<b id="pm"></b></div>
+  <div>P(t = 1) at the test point, averaged over samples<b id="pa"></b></div>
+  <div>Share of the 1000 sampled boundaries that put the point in class 1<b id="share"></b></div>
+</div>
+<div class="card muted">
+The prediction we would like is the average of the sigmoid over the posterior, which has no closed form. The Gaussian is easy to sample from, so we average the sigmoid over samples instead: (1/N<sub>s</sub>) Σ<sub>s</sub> 1/(1 + exp(−w<sub>s</sub>ᵀx)). Far from the data, the sampled boundaries disagree, so the average sits near 0.5, while a single weight vector can be confidently wrong there.
+</div>
+</main>
+<script>
+const DATA = [[-2.505, -2.864, 0], [-2.476, -2.377, 0], [-4.052, -1.212, 0], [-2.448, -1.702, 0], [-3.551, -2.164, 0], [-1.07, -1.393, 0], [-1.098, -0.366, 0], [-1.862, -2.623, 0], [-2.378, -3.35, 0], [-1.857, -3.162, 0], [-0.395, -2.944, 0], [-0.651, -2.671, 0], [-2.448, -1.423, 0], [-1.832, -4.086, 0], [-3.12, -1.764, 0], [-1.599, -2.778, 0], [-1.261, -0.9, 0], [-1.1, -2.856, 0], [-3.531, -1.992, 0], [-1.495, -2.938, 0], [1.318, 1.732, 1], [1.74, 2.187, 1], [1.771, 2.951, 1], [1.475, 1.209, 1], [3.128, 1.511, 1], [2.55, 4.974, 1], [3.855, 1.377, 1], [1.723, 3.92, 1], [3.067, 2.961, 1], [-0.099, 1.442, 1], [2.638, 1.893, 1], [2.371, 1.785, 1], [1.626, 2.473, 1], [2.695, 3.366, 1], [2.878, 0.362, 1], [3.034, 4.024, 1], [2.42, 2.778, 1], [2.601, 1.451, 1], [1.326, 1.874, 1], [0.905, 2.3, 1]];
+const $=id=>document.getElementById(id), NS="http://www.w3.org/2000/svg";
+const sig=z=>1/(1+Math.exp(-z)), sci=v=>Math.abs(v)<1e-3&&v!==0?v.toExponential(2):(+v.toFixed(3)).toString();
+const randn=()=>Math.sqrt(-2*Math.log(1-Math.random()))*Math.cos(2*Math.PI*Math.random());
+function el(n,a,p){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e}
+const xs=DATA.map(p=>p[0]), ys=DATA.map(p=>p[1]);
+const X0=Math.floor(Math.min(...xs))-1, X1=Math.ceil(Math.max(...xs))+1, Y0=Math.floor(Math.min(...ys))-1, Y1=Math.ceil(Math.max(...ys))+1;
+// ---- model
+function gradHess(w,V){let g=[-w[0]/V,-w[1]/V],H=[[-1/V,0],[0,-1/V]];
+  for(const [a,b,t] of DATA){const p=sig(w[0]*a+w[1]*b),r=t-p,q=p*(1-p);g[0]+=a*r;g[1]+=b*r;H[0][0]-=a*a*q;H[0][1]-=a*b*q;H[1][0]-=a*b*q;H[1][1]-=b*b*q}
+  return {g,H}}
+function newton(V){let w=[0,0];
+  for(let i=0;i<60;i++){const {g,H}=gradHess(w,V),det=H[0][0]*H[1][1]-H[0][1]*H[1][0],d=[(H[1][1]*g[0]-H[0][1]*g[1])/det,(-H[1][0]*g[0]+H[0][0]*g[1])/det];w=[w[0]-d[0],w[1]-d[1]];if(Math.hypot(d[0],d[1])<1e-10)break}
+  const {H}=gradHess(w,V); return {w,H}}
+const logg=(w,V)=>{let L=-(w[0]*w[0]+w[1]*w[1])/(2*V);for(const [a,b,t] of DATA){const p=sig(w[0]*a+w[1]*b);L+=Math.log(Math.max(t?p:1-p,1e-300))}return L};
+// ---- random numbers: 1000 standard-normal pairs, the first 20 are drawn on the plots
+let Z=Array.from({length:1000},()=>[randn(),randn()]);
+const DOM=[-4,8], GN=70, cache={};
+function grid(V){const k=V.toFixed(2); if(cache[k]) return cache[k];
+  const v=new Float64Array(GN*GN);
+  for(let j=0;j<GN;j++)for(let i=0;i<GN;i++) v[j*GN+i]=logg([DOM[0]+(i+.5)*(DOM[1]-DOM[0])/GN,DOM[0]+(j+.5)*(DOM[1]-DOM[0])/GN],V);
+  return cache[k]=v}
+function contourPath(vals,lev,toXY){let d="";
+  for(let j=0;j<GN-1;j++)for(let i=0;i<GN-1;i++){
+    const v=[vals[j*GN+i],vals[j*GN+i+1],vals[(j+1)*GN+i+1],vals[(j+1)*GN+i]],pt=[[i+.5,j+.5],[i+1.5,j+.5],[i+1.5,j+1.5],[i+.5,j+1.5]],e=[];
+    for(let k=0;k<4;k++){const a=v[k],b=v[(k+1)%4];if((a-lev)*(b-lev)<0){const f=(lev-a)/(b-a),p=pt[k],q=pt[(k+1)%4];e.push(toXY(p[0]+f*(q[0]-p[0]),p[1]+f*(q[1]-p[1])))}}
+    if(e.length===2)d+=`M${e[0][0].toFixed(1)} ${e[0][1].toFixed(1)}L${e[1][0].toFixed(1)} ${e[1][1].toFixed(1)}`;
+    else if(e.length===4)d+=`M${e[0][0].toFixed(1)} ${e[0][1].toFixed(1)}L${e[1][0].toFixed(1)} ${e[1][1].toFixed(1)}M${e[2][0].toFixed(1)} ${e[2][1].toFixed(1)}L${e[3][0].toFixed(1)} ${e[3][1].toFixed(1)}`}
+  return d}
+function axes(svg,x0,x1,y0,y1,X,Y,step,xl,yl,W,H,M){
+  const g=el("g",{class:"grid"},svg),ax=el("g",{class:"axis"},svg);
+  for(let v=Math.ceil(x0);v<=x1;v+=step){el("line",{x1:X(v),x2:X(v),y1:Y(y1),y2:Y(y0)},g);el("text",{x:X(v),y:Y(y0)+16,"text-anchor":"middle"},ax).textContent=v}
+  for(let v=Math.ceil(y0);v<=y1;v+=step){el("line",{x1:X(x0),x2:X(x1),y1:Y(v),y2:Y(v)},g);el("text",{x:X(x0)-6,y:Y(v)+4,"text-anchor":"end"},ax).textContent=v}
+  el("text",{x:(X(x0)+X(x1))/2,y:H-6,"text-anchor":"middle"},ax).textContent=xl;
+  el("text",{transform:`translate(14 ${(Y(y0)+Y(y1))/2}) rotate(-90)`,"text-anchor":"middle"},ax).textContent=yl}
+function draw(){
+  const V=+$("sg").value, {w:mw,H}=newton(V);
+  // posterior covariance and a Cholesky factor
+  const A=[[-H[0][0],-H[0][1]],[-H[1][0],-H[1][1]]], det=A[0][0]*A[1][1]-A[0][1]*A[1][0];
+  const S=[[A[1][1]/det,-A[0][1]/det],[-A[1][0]/det,A[0][0]/det]];
+  const l11=Math.sqrt(S[0][0]), l21=S[1][0]/l11, l22=Math.sqrt(Math.max(S[1][1]-l21*l21,1e-18));
+  const ws=Z.map(z=>[mw[0]+l11*z[0], mw[1]+l21*z[0]+l22*z[1]]);
+  // ---------- panel 1: weight space
+  {const svg=$("wsp");svg.innerHTML="";const W=760,Hh=460,m={t:16,b:44},S0=Hh-m.t-m.b,ox=(W-S0)/2,oy=m.t;
+   const X=v=>ox+(v-DOM[0])/(DOM[1]-DOM[0])*S0, Y=v=>oy+S0-(v-DOM[0])/(DOM[1]-DOM[0])*S0, cell=S0/GN;
+   const cp=el("clipPath",{id:"cw"},el("defs",{},svg));el("rect",{x:ox,y:oy,width:S0,height:S0},cp);
+   axes(svg,DOM[0],DOM[1],DOM[0],DOM[1],X,Y,2,"w₁","w₂",W,Hh,m);
+   const vals=grid(V),mx=logg(mw,V),toXY=(i,j)=>[ox+i*cell,oy+S0-j*cell];
+   const gp=el("g",{"clip-path":"url(#cw)"},svg);
+   el("path",{d:[0.5,2,4.5,8].map(k=>contourPath(vals,mx-k,toXY)).join(""),fill:"none",stroke:"var(--c0)","stroke-width":1.8},gp);
+   const l=(()=>{const tr=A[0][0]+A[1][1],dt=det,ds=Math.sqrt(Math.max(tr*tr/4-dt,0));return[tr/2+ds,Math.max(tr/2-ds,1e-12)]})();
+   const th=0.5*Math.atan2(2*A[0][1],A[0][0]-A[1][1]),v1=[Math.cos(th),Math.sin(th)],v2=[-Math.sin(th),Math.cos(th)];
+   [0.5,2,4.5,8].forEach(k=>{let d="";const r=Math.sqrt(2*k);for(let q=0;q<=100;q++){const a=2*Math.PI*q/100,p1=r*Math.cos(a)/Math.sqrt(l[0]),p2=r*Math.sin(a)/Math.sqrt(l[1]);d+=(q?"L":"M")+X(mw[0]+p1*v1[0]+p2*v2[0]).toFixed(1)+" "+Y(mw[1]+p1*v1[1]+p2*v2[1]).toFixed(1)}
+     el("path",{d,fill:"none",stroke:"var(--c1)","stroke-width":1.6,"stroke-dasharray":"5 4"},gp)});
+   ws.slice(0,20).forEach(w=>el("circle",{cx:X(w[0]),cy:Y(w[1]),r:3.2,fill:"var(--muted)","fill-opacity":.8},gp));
+   el("path",{d:`M${X(mw[0])} ${Y(mw[1])-9}L${X(mw[0])+9} ${Y(mw[1])}L${X(mw[0])} ${Y(mw[1])+9}L${X(mw[0])-9} ${Y(mw[1])}Z`,fill:"var(--map)",stroke:"var(--bg)","stroke-width":2},svg)}
+  // ---------- panel 2: data space with sampled boundaries
+  const t=[+$("t1").value,+$("t2").value];
+  {const svg=$("dsp");svg.innerHTML="";const W=760,Hh=420,m={l:56,r:16,t:16,b:44};
+   const X=v=>m.l+(v-X0)/(X1-X0)*(W-m.l-m.r), Y=v=>Hh-m.b-(v-Y0)/(Y1-Y0)*(Hh-m.t-m.b);
+   const cp=el("clipPath",{id:"cd"},el("defs",{},svg));el("rect",{x:m.l,y:m.t,width:W-m.l-m.r,height:Hh-m.t-m.b},cp);
+   axes(svg,X0,X1,Y0,Y1,X,Y,2,"x₁","x₂",W,Hh,m);
+   const line=(w,a)=>{let p1,p2;if(Math.abs(w[1])<1e-9){p1=[0,Y0];p2=[0,Y1]}else{p1=[X0,-w[0]*X0/w[1]];p2=[X1,-w[0]*X1/w[1]]}
+     el("line",Object.assign({x1:X(p1[0]),y1:Y(p1[1]),x2:X(p2[0]),y2:Y(p2[1]),"clip-path":"url(#cd)"},a),svg)};
+   ws.slice(0,20).forEach(w=>line(w,{stroke:"var(--muted)","stroke-opacity":.6,"stroke-width":1.5}));
+   line(mw,{stroke:"var(--map)","stroke-width":3});
+   DATA.forEach(p=>{const col=p[2]?"var(--c1)":"var(--c0)";p[2]?el("rect",{x:X(p[0])-6,y:Y(p[1])-6,width:12,height:12,fill:col,"fill-opacity":.85,stroke:"var(--bg)","stroke-width":1.5},svg):el("circle",{cx:X(p[0]),cy:Y(p[1]),r:7,fill:col,"fill-opacity":.85,stroke:"var(--bg)","stroke-width":1.5},svg)});
+   const c=el("path",{d:`M${X(t[0])-8} ${Y(t[1])-8}L${X(t[0])+8} ${Y(t[1])+8}M${X(t[0])-8} ${Y(t[1])+8}L${X(t[0])+8} ${Y(t[1])-8}`,stroke:"var(--fg)","stroke-width":3},svg)}
+  // ---------- panel 3: predictive maps
+  const NX=38,NY=26;
+  const predAt=(a,b)=>{let s=0;for(const w of ws) s+=sig(w[0]*a+w[1]*b);return s/ws.length};
+  const draw3=(id,f)=>{const svg=$(id);svg.innerHTML="";const W=380,Hh=300,m={l:34,r:8,t:8,b:30};
+    const X=v=>m.l+(v-X0)/(X1-X0)*(W-m.l-m.r), Y=v=>Hh-m.b-(v-Y0)/(Y1-Y0)*(Hh-m.t-m.b);
+    for(let i=0;i<NX;i++)for(let j=0;j<NY;j++){const a=X0+(i+.5)*(X1-X0)/NX,b=Y0+(j+.5)*(Y1-Y0)/NY,p=f(a,b);
+      el("rect",{x:X(X0+i*(X1-X0)/NX),y:Y(Y0+(j+1)*(Y1-Y0)/NY),width:(W-m.l-m.r)/NX+.4,height:(Hh-m.t-m.b)/NY+.4,fill:p>.5?"var(--c1)":"var(--c0)","fill-opacity":(Math.abs(p-.5)*2).toFixed(3)},svg)}
+    axes(svg,X0,X1,Y0,Y1,X,Y,4,"x₁","x₂",W,Hh,m);
+    DATA.forEach(p=>{const col=p[2]?"var(--c1)":"var(--c0)";el("circle",{cx:X(p[0]),cy:Y(p[1]),r:3.2,fill:col,stroke:"var(--bg)","stroke-width":1},svg)});
+    el("path",{d:`M${X(t[0])-6} ${Y(t[1])-6}L${X(t[0])+6} ${Y(t[1])+6}M${X(t[0])-6} ${Y(t[1])+6}L${X(t[0])+6} ${Y(t[1])-6}`,stroke:"var(--fg)","stroke-width":2.5},svg)};
+  const mapP=(a,b)=>sig(mw[0]*a+mw[1]*b);
+  draw3("pmap",mapP); draw3("pavg",predAt);
+  // readouts
+  $("mapw").textContent=`(${mw[0].toFixed(2)}, ${mw[1].toFixed(2)})`;
+  $("hess").textContent=`[${A[0][0].toFixed(2)} ${A[0][1].toFixed(2)}; ${A[1][0].toFixed(2)} ${A[1][1].toFixed(2)}]`;
+  $("cov").textContent=`[${S[0][0].toFixed(2)} ${S[0][1].toFixed(2)}; ${S[1][0].toFixed(2)} ${S[1][1].toFixed(2)}]`;
+  $("sds").textContent=`${Math.sqrt(S[0][0]).toFixed(2)}, ${Math.sqrt(S[1][1]).toFixed(2)}`;
+  $("pm").textContent=mapP(t[0],t[1]).toFixed(3); $("pa").textContent=predAt(t[0],t[1]).toFixed(3);
+  $("share").textContent=(100*ws.filter(w=>w[0]*t[0]+w[1]*t[1]>0).length/ws.length).toFixed(0)+"%";
+  $("sgo").textContent=V.toFixed(1); $("t1o").textContent=t[0].toFixed(1); $("t2o").textContent=t[1].toFixed(1);
+}
+["sg","t1","t2"].forEach(id=>$(id).addEventListener("input",draw));
+$("resample").onclick=()=>{Z=Array.from({length:1000},()=>[randn(),randn()]);draw()};
+draw();
+</script>
+</body>
+</html>

@@ -31,6 +31,7 @@ Notes by chapter (work in progress).
 - [The numerator of the posterior and what is intractable](chapter4-numerator-and-posterior.html)
 - [Interactive: Newton-Raphson step by step](chapter4-newton-raphson.html)
 - [Interactive: the gamma density and its Laplace approximation](chapter4-gamma-laplace.html)
+- [Interactive: Laplace approximation for the binary response model](chapter4-laplace-binary.html)
 
 ## Chapter 5: Classification
 
