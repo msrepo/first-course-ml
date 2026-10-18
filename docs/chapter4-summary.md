@@ -98,3 +98,12 @@ The chain moves uphill always and downhill sometimes, so it spends time in propo
 3. Laplace turns the MAP point and curvature into a Gaussian posterior approximation.
 4. MH samples from the true posterior using only ratios of $$g$$, at extra cost and with convergence care.
 5. In every case, predictions average over parameter uncertainty (where it is kept), and the sampling-based average replaces integrals that cannot be done.
+
+## An applied example: Laplace approximation for segmentation uncertainty
+
+Zepf et al., ["Laplacian Segmentation Networks Improve Epistemic Uncertainty Quantification"](https://papers.miccai.org/miccai-2024/442-Paper1339.html) (MICCAI 2024; [arXiv](https://arxiv.org/abs/2303.13123)), apply the chapter's recipe to a medical image segmentation network. First the network is trained to a single best set of weights. This is a MAP-style solution, the point described in [Option 1: the MAP estimate](#option-1-the-map-estimate). Instead of stopping there, they treat that point as the centre of a Gaussian over the weights, using the curvature (Hessian) at the point to set its spread. That is exactly [Option 2: the Laplace approximation](#option-2-the-laplace-approximation).
+
+The practical difficulty is scale. In this chapter the model has two weights, so the Hessian is a 2×2 matrix that can be formed and inverted. A segmentation network has millions of weights and a prediction for every pixel, so the full Hessian cannot be built. The authors use a much cheaper structured approximation of it, designed to cope with the network's skip connections, so the Laplace recipe still works at this size.
+
+The approximate posterior is then used the way the chapter prescribes for predictions: draw several weight vectors from the Gaussian and look at all of the resulting predictions instead of a single one. Where the sampled networks disagree about a pixel, the model does not know the answer, which is *epistemic* uncertainty. Uncertainty that comes from the data itself (*aleatoric*) is modelled separately in the network's output. The disagreement is used to flag out-of-distribution images, where an ordinary network tends to stay confidently wrong. The authors report evaluating it on three public medical segmentation datasets, with better out-of-distribution detection than MC dropout and deep ensembles.
+
