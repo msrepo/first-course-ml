@@ -26,6 +26,7 @@ Notes by chapter (work in progress).
 ## Chapter 4: Bayesian inference
 
 - [Chapter 4 summary: Bayesian inference](chapter4-summary.html)
+- [Interactive: the binary response dataset](chapter4-binary-data.html)
 
 ## Chapter 5: Classification
 

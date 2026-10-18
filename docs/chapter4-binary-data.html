@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 4: Binary response data</title>
+<style>
+:root{--bg:#fff;--fg:#1f2328;--muted:#656d76;--grid:#d8dee4;--c0:#1f6feb;--c1:#d1242f;--card:#f6f8fa}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--grid:#30363d;--c0:#58a6ff;--c1:#ff7b72;--card:#161b22}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:.5rem 0}
+.card{background:var(--card);border-radius:8px;padding:12px 16px;margin:12px 0}
+svg{width:100%;height:auto;display:block;background:var(--bg);border-radius:8px}
+.axis text{fill:var(--muted);font-size:12px}
+.grid line{stroke:var(--grid)}
+.muted{color:var(--muted);font-size:.9rem}
+.opts{display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+.nums{display:flex;flex-wrap:wrap;gap:8px 28px}
+</style>
+</head>
+<body>
+<main>
+<h1>A binary response dataset</h1>
+<p class="muted">Chapter 4 · Each object has two attributes, x<sub>1</sub> and x<sub>2</sub>, and a binary label t. The aim is to learn a rule that predicts t for a new object. Hover or tap a point to read its values. Data: <code>logregdata.mat</code> from the book's companion files.</p>
+
+<div class="card opts">
+  <label><input type="checkbox" id="c0" checked> Show t = 0 (circles)</label>
+  <label><input type="checkbox" id="c1" checked> Show t = 1 (squares)</label>
+</div>
+
+<svg id="plot" viewBox="0 0 760 460" role="img" aria-label="Scatter plot of the two-attribute binary response data: circles for label 0 and squares for label 1"></svg>
+<p class="muted"><span style="color:var(--c0)">●</span> t = 0 (circle) &nbsp; <span style="color:var(--c1)">■</span> t = 1 (square)</p>
+
+<div class="card nums">
+  <div id="info">Hover over a point.</div>
+  <div>Objects: <b id="n"></b> &nbsp; t = 0: <b id="n0"></b> &nbsp; t = 1: <b id="n1"></b></div>
+</div>
+
+<div class="card muted">
+The two classes occupy different regions of the plane, with a gap between them. There is no response variable on a continuous scale, only a class label, so this is a classification problem rather than regression. In the chapter, a linear score w<sup>T</sup>x passed through the sigmoid turns this into the probability that a point belongs to class 1.
+</div>
+</main>
+<script>
+const DATA = [[-2.505, -2.864, 0], [-2.476, -2.377, 0], [-4.052, -1.212, 0], [-2.448, -1.702, 0], [-3.551, -2.164, 0], [-1.07, -1.393, 0], [-1.098, -0.366, 0], [-1.862, -2.623, 0], [-2.378, -3.35, 0], [-1.857, -3.162, 0], [-0.395, -2.944, 0], [-0.651, -2.671, 0], [-2.448, -1.423, 0], [-1.832, -4.086, 0], [-3.12, -1.764, 0], [-1.599, -2.778, 0], [-1.261, -0.9, 0], [-1.1, -2.856, 0], [-3.531, -1.992, 0], [-1.495, -2.938, 0], [1.318, 1.732, 1], [1.74, 2.187, 1], [1.771, 2.951, 1], [1.475, 1.209, 1], [3.128, 1.511, 1], [2.55, 4.974, 1], [3.855, 1.377, 1], [1.723, 3.92, 1], [3.067, 2.961, 1], [-0.099, 1.442, 1], [2.638, 1.893, 1], [2.371, 1.785, 1], [1.626, 2.473, 1], [2.695, 3.366, 1], [2.878, 0.362, 1], [3.034, 4.024, 1], [2.42, 2.778, 1], [2.601, 1.451, 1], [1.326, 1.874, 1], [0.905, 2.3, 1]];
+const $=id=>document.getElementById(id), NS="http://www.w3.org/2000/svg";
+const W=760,H=460,M={l:56,r:16,t:16,b:44};
+const xs=DATA.map(p=>p[0]), ys=DATA.map(p=>p[1]);
+const x0=Math.floor(Math.min(...xs))-1, x1=Math.ceil(Math.max(...xs))+1, y0=Math.floor(Math.min(...ys))-1, y1=Math.ceil(Math.max(...ys))+1;
+const X=v=>M.l+(v-x0)/(x1-x0)*(W-M.l-M.r), Y=v=>H-M.b-(v-y0)/(y1-y0)*(H-M.t-M.b);
+function el(n,a,p){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e}
+function draw(){
+  const svg=$("plot"); svg.innerHTML="";
+  const g=el("g",{class:"grid"},svg), ax=el("g",{class:"axis"},svg);
+  for(let v=Math.ceil(x0);v<=x1;v+=2){el("line",{x1:X(v),x2:X(v),y1:M.t,y2:H-M.b},g);el("text",{x:X(v),y:H-M.b+16,"text-anchor":"middle"},ax).textContent=v}
+  for(let v=Math.ceil(y0);v<=y1;v+=2){el("line",{x1:M.l,x2:W-M.r,y1:Y(v),y2:Y(v)},g);el("text",{x:M.l-6,y:Y(v)+4,"text-anchor":"end"},ax).textContent=v}
+  el("text",{x:(W+M.l)/2,y:H-6,"text-anchor":"middle"},ax).textContent="x₁";
+  el("text",{transform:`translate(14 ${H/2}) rotate(-90)`,"text-anchor":"middle"},ax).textContent="x₂";
+  DATA.forEach(p=>{
+    if(!$("c"+p[2]).checked) return;
+    const col=p[2]?"var(--c1)":"var(--c0)";
+    const m=p[2]?el("rect",{x:X(p[0])-6,y:Y(p[1])-6,width:12,height:12,fill:col,"fill-opacity":.8,stroke:"var(--bg)","stroke-width":1.5},svg)
+              :el("circle",{cx:X(p[0]),cy:Y(p[1]),r:7,fill:col,"fill-opacity":.8,stroke:"var(--bg)","stroke-width":1.5},svg);
+    const show=()=>{$("info").textContent=`x₁ = ${p[0].toFixed(2)}, x₂ = ${p[1].toFixed(2)}, t = ${p[2]}`};
+    m.addEventListener("mouseenter",show); m.addEventListener("click",show);
+  });
+}
+$("n").textContent=DATA.length; $("n0").textContent=DATA.filter(p=>!p[2]).length; $("n1").textContent=DATA.filter(p=>p[2]).length;
+["c0","c1"].forEach(id=>$(id).addEventListener("input",draw));
+draw();
+</script>
+</body>
+</html>
