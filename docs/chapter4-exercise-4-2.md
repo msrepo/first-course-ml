@@ -22,7 +22,7 @@ $$
 
 Compute the Laplace approximation to the posterior. The MAP value $$\hat r$$ comes out in closed form.
 
-The Laplace approximation is $$\mathcal{N}(\mu,\sigma^2)$$ with $$\mu=\hat r=\arg\max_r\log g(r)$$ and $$\sigma^2=-1\big/\frac{\partial^2\log g}{\partial r^2}\big|_{r=\hat r}$$, where $$g(r)=p(y\mid r,N)\,p(r\mid\alpha,\beta)$$. With one variable, the Hessian is the second derivative.
+The Laplace approximation is $$\mathcal{N}(\mu,\sigma^2)$$ with $$\mu=\hat r=\arg\max_r\log g(r)$$ and $$\sigma^2=-1\big/\frac{\partial^2\log g}{\partial r^2}\big\vert_{r=\hat r}$$, where $$g(r)=p(y\mid r,N)\,p(r\mid\alpha,\beta)$$. With one variable, the Hessian is the second derivative.
 
 ## Step 1: the function g and its log
 
