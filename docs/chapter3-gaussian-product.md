@@ -114,7 +114,7 @@ $$
 
 The product of two densities is therefore not itself a density, because its area is $$c\ne 1$$. The factor $$\mathcal{N}(\mu,\sigma^2)$$ is the normalised part.
 
-**Step 7: an independent check of $$c$$.** Let $$X\sim\mathcal{N}(\mu_0,\sigma_0^2)$$ and $$Y=X+\epsilon$$ with $$\epsilon\sim\mathcal{N}(0,\sigma_1^2)$$ independent of $$X$$. The density of $$Y$$ at $$\mu_1$$ is $$\int p_1\text{-style}\ \mathcal{N}(x,\sigma_1^2)\big|_{\mu_1}\,p_0(x)\,dx=\int p_0(x)p_1(x)\,dx$$. The moment-generating function of $$\mathcal{N}(\mu,\sigma^2)$$ is $$\exp\{\mu t+\sigma^2t^2/2\}$$, and for independent variables moment-generating functions multiply, so $$Y$$ has the MGF $$\exp\{\mu_0t+(\sigma_0^2+\sigma_1^2)t^2/2\}$$, that of $$\mathcal{N}(\mu_0,\sigma_0^2+\sigma_1^2)$$. Its density at $$\mu_1$$ is exactly $$c$$. This route never completes a square.
+**Step 7: an independent check of $$c$$.** Let $$X\sim\mathcal{N}(\mu_0,\sigma_0^2)$$ and $$Y=X+\epsilon$$ with $$\epsilon\sim\mathcal{N}(0,\sigma_1^2)$$ independent of $$X$$. Given $$X=x$$, $$Y$$ has the density $$\frac{1}{\sqrt{2\pi\sigma_1^2}}\exp\{-(y-x)^2/(2\sigma_1^2)\}$$, and at $$y=\mu_1$$ this equals $$p_1(x)$$, because the exponent is the same with the roles of $$x$$ and $$\mu_1$$ swapped. So the density of $$Y$$ at $$\mu_1$$ is $$\int p_1(x)\,p_0(x)\,dx$$, the same integral as in Step 6. The moment-generating function of $$\mathcal{N}(\mu,\sigma^2)$$ is $$\exp\{\mu t+\sigma^2t^2/2\}$$, and for independent variables moment-generating functions multiply, so $$Y$$ has the MGF $$\exp\{\mu_0t+(\sigma_0^2+\sigma_1^2)t^2/2\}$$, that of $$\mathcal{N}(\mu_0,\sigma_0^2+\sigma_1^2)$$. Its density at $$\mu_1$$ is exactly $$c$$. This route never completes a square.
 
 ## What it means
 
