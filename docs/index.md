@@ -97,6 +97,10 @@ Notes by chapter (work in progress).
 
 - [Interactive: Figure 5.2, a Gaussian fitted to each class (Equations 5.4 and 5.5)](chapter5-class-conditional-gaussians.html)
 
+**Exercises**
+
+- [Notes: Exercise 5.1, the posterior of a class mean with a Gaussian prior](chapter5-exercise-5-1.html)
+
 ## Chapter 6: Clustering
 
 **Overview**
