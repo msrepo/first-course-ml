@@ -20,6 +20,7 @@ Notes by chapter (work in progress).
 
 - [Chapter 3 summary: the Bayesian approach](chapter3-summary.html)
 - [Interactive: the beta density](chapter3-beta-density.html)
+- [Interactive: the binomial likelihood](chapter3-binomial-likelihood.html)
 - [The product of two Gaussians: derivation](chapter3-gaussian-product.html)
 - [Interactive: the product of two Gaussians](chapter3-gaussian-product-interactive.html)
 - [Mean and variance of a beta random variable](chapter3-beta-mean.html)

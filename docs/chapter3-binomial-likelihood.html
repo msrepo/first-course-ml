@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 3: The binomial likelihood</title>
+<style>
+:root{--bg:#fff;--fg:#1f2328;--muted:#656d76;--grid:#d8dee4;--a:#1f6feb;--b:#d1242f;--card:#f6f8fa}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--grid:#30363d;--a:#58a6ff;--b:#ff7b72;--card:#161b22}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
+main{max-width:900px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:.5rem 0}
+h2{font-size:1.05rem;margin:1rem 0 .3rem}
+.card{background:var(--card);border-radius:8px;padding:12px 16px;margin:12px 0}
+.row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin:6px 0}
+.row output{font-variant-numeric:tabular-nums;min-width:4em;text-align:right}
+input[type=range]{width:100%}
+svg{width:100%;height:auto;display:block;background:var(--bg);border-radius:8px}
+.axis text{fill:var(--muted);font-size:12px}
+.grid line{stroke:var(--grid)}
+.muted{color:var(--muted);font-size:.9rem}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.cols{grid-template-columns:minmax(0,1fr)}}
+.opts{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+button{font:inherit;padding:4px 10px}
+.nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px 16px}
+.nums div{background:var(--bg);border-radius:8px;padding:8px 12px}
+.nums b{display:block;font-size:1.2rem;font-variant-numeric:tabular-nums}
+.sticky{position:sticky;top:0;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+</style>
+</head>
+<body>
+<main>
+<h1>The binomial likelihood</h1>
+<p class="muted">Chapter 3 · The binomial formula P(y | r, N) = (N choose y) r<sup>y</sup> (1 − r)<sup>N−y</sup> gives the chance of y heads in N tosses when each toss lands heads with probability r. Read as a function of y with r fixed, it is a probability distribution. Read as a function of r with y and N fixed (the observed data), it is the likelihood of r. Same formula, two readings.</p>
+
+<div class="card opts">
+  <span class="muted">Examples:</span>
+  <button data-n="10" data-y="6">10 tosses, 6 heads</button>
+  <button data-n="100" data-y="70">100 tosses, 70 heads</button>
+  <button data-n="10" data-y="0">10 tosses, no heads</button>
+</div>
+
+<div class="card sticky">
+  <div class="row"><label for="n">Number of tosses N</label><input type="range" id="n" min="1" max="200" step="1" value="10"><output id="no"></output></div>
+  <div class="row"><label for="y">Number of heads y</label><input type="range" id="y" min="0" max="10" step="1" value="6"><output id="yo"></output></div>
+  <div class="row"><label for="r">Head probability r (used in the left plot)</label><input type="range" id="r" min="0.01" max="0.99" step="0.01" value="0.5"><output id="ro"></output></div>
+</div>
+
+<div class="cols">
+  <div>
+    <h2>Left: a distribution over y (r fixed)</h2>
+    <svg id="pl" viewBox="0 0 380 280" role="img" aria-label="Binomial probabilities over the number of heads"></svg>
+    <p class="muted">The bars show P(y | r, N) for every possible y. They add up to 1. The highlighted bar is the observed y.</p>
+  </div>
+  <div>
+    <h2>Right: the likelihood of r (y and N fixed)</h2>
+    <svg id="pr" viewBox="0 0 380 280" role="img" aria-label="Binomial likelihood as a function of the head probability"></svg>
+    <p class="muted">The curve is L(r), scaled so that its peak is 1. Its area is not 1. The dashed line marks r from the left plot, and the dotted line marks the peak y/N.</p>
+  </div>
+</div>
+
+<div class="card nums">
+  <div>P(y | r, N), the height of the highlighted bar<b id="p0"></b></div>
+  <div>Sum of the bars<b id="s0"></b></div>
+  <div>Peak of the likelihood, at r = y/N<b id="mle"></b></div>
+  <div>Peak value of L(r)<b id="pk"></b></div>
+  <div>Area under L(r), found numerically<b id="ar"></b></div>
+  <div>Typical width, √(r̂(1 − r̂)/N)<b id="wd"></b></div>
+</div>
+<div class="card muted">
+As a function of r, the likelihood is proportional to r<sup>y</sup>(1 − r)<sup>N−y</sup>, a hump on [0, 1] that is highest at r = y/N and drops to zero at the ends (unless y = 0 or y = N, when it is highest at an end). The hump narrows as N grows, because more tosses say more about r. The curve is lopsided unless y/N = 1/2. Its area is exactly 1/(N + 1), not 1, so it is not a distribution over r. Multiplying it by a beta prior and normalising gives a beta posterior (Chapter 3).
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id), NS="http://www.w3.org/2000/svg";
+function lgamma(x){const g=7,c=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+  if(x<0.5) return Math.log(Math.PI/Math.sin(Math.PI*x))-lgamma(1-x);
+  x-=1;let s=c[0];for(let i=1;i<g+2;i++)s+=c[i]/(x+i);const t=x+g+.5;return .5*Math.log(2*Math.PI)+(x+.5)*Math.log(t)-t+Math.log(s)}
+const logC=(n,y)=>lgamma(n+1)-lgamma(y+1)-lgamma(n-y+1);
+const L=(r,n,y)=>{ if(r<=0) return y===0?1:0; if(r>=1) return y===n?1:0; return Math.exp(logC(n,y)+y*Math.log(r)+(n-y)*Math.log(1-r)) };
+function el(n,a,p){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e}
+function axes(svg,X,Y,x0,x1,y0,y1,xt,yt,xl,yl,W,H,M){
+  const g=el("g",{class:"grid"},svg),a=el("g",{class:"axis"},svg);
+  xt.forEach(v=>{el("line",{x1:X(v),x2:X(v),y1:Y(y0),y2:Y(y1)},g);el("text",{x:X(v),y:Y(y0)+16,"text-anchor":"middle"},a).textContent=v});
+  yt.forEach(v=>{el("line",{x1:X(x0),x2:X(x1),y1:Y(v),y2:Y(v)},g);el("text",{x:X(x0)-6,y:Y(v)+4,"text-anchor":"end"},a).textContent=+v.toFixed(3)});
+  el("text",{x:(X(x0)+X(x1))/2,y:H-6,"text-anchor":"middle"},a).textContent=xl;
+  el("text",{transform:`translate(12 ${(Y(y0)+Y(y1))/2}) rotate(-90)`,"text-anchor":"middle"},a).textContent=yl}
+function draw(){
+  const n=+$("n").value; $("y").max=n; let y=Math.min(+$("y").value,n); $("y").value=y; const r=+$("r").value;
+  // left: pmf over y
+  {const svg=$("pl");svg.innerHTML="";const W=380,H=280,M={l:46,r:10,t:10,b:36};
+   const pm=Array.from({length:n+1},(_,k)=>L(r,n,k)), mx=Math.max(...pm)*1.15;
+   const X=v=>M.l+(v+.5)/(n+1)*(W-M.l-M.r), Y=v=>H-M.b-v/mx*(H-M.t-M.b);
+   const step=Math.max(1,Math.ceil(n/10)), xt=[];for(let k=0;k<=n;k+=step)xt.push(k);
+   const yt=[0,1,2,3,4].map(i=>mx*i/4/1.15*1.0);
+   axes(svg,X,Y,-.5,n+.5,0,mx,xt,yt,"number of heads y","P(y | r, N)",W,H,M);
+   const bw=Math.max(1,(W-M.l-M.r)/(n+1)-1);
+   pm.forEach((p,k)=>el("rect",{x:X(k)-bw/2,y:Y(p),width:bw,height:Y(0)-Y(p),fill:k===y?"var(--b)":"var(--a)","fill-opacity":k===y?.95:.55},svg));
+   $("p0").textContent=pm[y].toFixed(4); $("s0").textContent=pm.reduce((a,b)=>a+b,0).toFixed(4)}
+  // right: likelihood of r, scaled to peak 1
+  {const svg=$("pr");svg.innerHTML="";const W=380,H=280,M={l:46,r:10,t:10,b:36};
+   const rh=y/n, pk=L(rh,n,y);
+   const X=v=>M.l+v*(W-M.l-M.r), Y=v=>H-M.b-v/1.1*(H-M.t-M.b);
+   axes(svg,X,Y,0,1,0,1.1,[0,.25,.5,.75,1],[0,.25,.5,.75,1],"head probability r","L(r) / peak",W,H,M);
+   const N=400,rs=Array.from({length:N+1},(_,i)=>i/N);
+   el("path",{d:`M${X(0)} ${Y(0)}`+rs.map(q=>`L${X(q)} ${Y(L(q,n,y)/pk)}`).join("")+`L${X(1)} ${Y(0)}Z`,fill:"var(--b)","fill-opacity":.18,stroke:"none"},svg);
+   el("path",{d:rs.map((q,i)=>(i?"L":"M")+X(q).toFixed(1)+" "+Y(L(q,n,y)/pk).toFixed(1)).join(""),fill:"none",stroke:"var(--b)","stroke-width":2.5},svg);
+   el("line",{x1:X(r),x2:X(r),y1:Y(0),y2:Y(1.1),stroke:"var(--a)","stroke-dasharray":"5 4","stroke-width":2},svg);
+   el("line",{x1:X(rh),x2:X(rh),y1:Y(0),y2:Y(1),stroke:"var(--muted)","stroke-dasharray":"2 3"},svg);
+   const area=(()=>{let s=0,m=4000;for(let i=0;i<=m;i++)s+=L(i/m,n,y)*(i===0||i===m?.5:1);return s/m})();
+   $("mle").textContent=rh.toFixed(3); $("pk").textContent=pk.toFixed(4);
+   $("ar").textContent=area.toFixed(4)+"  (1/(N+1) = "+(1/(n+1)).toFixed(4)+")";
+   $("wd").textContent=Math.sqrt(rh*(1-rh)/n).toFixed(3)}
+  $("no").textContent=n; $("yo").textContent=y; $("ro").textContent=r.toFixed(2);
+}
+["n","y","r"].forEach(id=>$(id).addEventListener("input",draw));
+document.querySelectorAll("button[data-n]").forEach(b=>b.onclick=()=>{$("n").value=b.dataset.n;$("y").max=b.dataset.n;$("y").value=b.dataset.y;draw()});
+draw();
+</script>
+</body>
+</html>
