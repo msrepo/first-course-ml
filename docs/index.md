@@ -28,17 +28,34 @@ Notes by chapter (work in progress).
 
 ## Chapter 4: Bayesian inference
 
-- [Chapter 4 summary: Bayesian inference](chapter4-summary.html)
-- [Interactive: the binary response dataset](chapter4-binary-data.html)
-- [Interactive: one function, two readings (density of the data, likelihood of the weight)](chapter4-likelihood-two-views.html)
+**Overview**
+
+- [Notes: Chapter 4 summary](chapter4-summary.html)
+
+**The running example: the binary response model**
+
+- [Interactive: the binary response dataset, with prior draws](chapter4-binary-data.html)
+
+**Prior, likelihood and the unnormalised posterior**
+
+- [Interactive: the likelihood read two ways (density of the data, likelihood of the weight)](chapter4-likelihood-two-views.html)
 - [Interactive: evaluating the numerator of Bayes' rule at one w](chapter4-evaluate-numerator.html)
-- [The numerator of the posterior and what is intractable](chapter4-numerator-and-posterior.html)
-- [Interactive: Newton-Raphson step by step](chapter4-newton-raphson.html)
-- [Exercise 4.1: the Laplace approximation is exact for a linear Gaussian model](chapter4-exercise-4-1.html)
-- [Exercise 4.2: the Laplace approximation to the coin posterior](chapter4-exercise-4-2.html)
-- [Interactive: the coin posterior and its Laplace approximation (Exercise 4.3)](chapter4-beta-laplace.html)
+- [Notes: the numerator of the posterior and what is intractable](chapter4-numerator-and-posterior.html)
+
+**MAP and Newton–Raphson**
+
+- [Interactive: Newton–Raphson step by step](chapter4-newton-raphson.html)
+
+**Laplace approximation**
+
 - [Interactive: the gamma density and its Laplace approximation](chapter4-gamma-laplace.html)
 - [Interactive: Laplace approximation for the binary response model](chapter4-laplace-binary.html)
+
+**Exercises**
+
+- [Notes: Exercise 4.1, the Laplace approximation is exact for a linear Gaussian model](chapter4-exercise-4-1.html)
+- [Notes: Exercise 4.2, the Laplace approximation to the coin posterior](chapter4-exercise-4-2.html)
+- [Interactive: Exercise 4.3, the coin posterior and its Laplace approximation](chapter4-beta-laplace.html)
 
 ## Chapter 5: Classification
 
