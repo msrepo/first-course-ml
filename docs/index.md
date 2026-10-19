@@ -100,6 +100,7 @@ Notes by chapter (work in progress).
 **Exercises**
 
 - [Notes: Exercise 5.1, the posterior of a class mean with a Gaussian prior](chapter5-exercise-5-1.html)
+- [Notes: Exercise 5.4, maximum likelihood for the multinomial class-conditional](chapter5-exercise-5-4.html)
 
 ## Chapter 6: Clustering
 
