@@ -106,7 +106,52 @@ $$
 
 ## Step 6: the true posterior
 
-The likelihood, read as a function of $$\mathbf{w}$$, and the prior are both Gaussian shapes in $$\mathbf{w}$$, so their product is too (the product-of-Gaussians rule). Concretely, the log posterior is the quadratic of Step 2 plus a constant. A Gaussian $$\mathcal{N}(\boldsymbol{\mu}_w,\boldsymbol{\Sigma}_w)$$ has log density $$-\tfrac12\mathbf{w}^T\boldsymbol{\Sigma}_w^{-1}\mathbf{w}+\mathbf{w}^T\boldsymbol{\Sigma}_w^{-1}\boldsymbol{\mu}_w+\text{const}$$. Matching the quadratic and linear terms:
+This step finds the true posterior, independently of the Laplace calculation, so that Step 7 has something to compare with. The claim is that the posterior is Gaussian, and the step reads off its mean and covariance by matching coefficients.
+
+**One variable first** (one weight $$w$$, one data point $$(x,t)$$, unit noise, prior $$\mathcal{N}(\mu_0,\sigma_0^2)$$). The log posterior is the log likelihood plus the log prior, plus a constant:
+
+$$
+-\tfrac12(t-wx)^2-\frac{(w-\mu_0)^2}{2\sigma_0^2}+\text{const}.
+$$
+
+Expand both squares and collect powers of $$w$$ (the terms without $$w$$ go into the constant):
+
+$$
+-\tfrac12\big(t^2-2txw+x^2w^2\big)-\frac{w^2-2\mu_0w+\mu_0^2}{2\sigma_0^2}
+=-\tfrac12\,w^2\Big(x^2+\frac1{\sigma_0^2}\Big)+w\Big(xt+\frac{\mu_0}{\sigma_0^2}\Big)+\text{const}.
+$$
+
+Now write the log of a Gaussian $$\mathcal{N}(\mu_w,\sigma_w^2)$$ the same way:
+
+$$
+-\frac{(w-\mu_w)^2}{2\sigma_w^2}=-\tfrac12\,\frac{w^2}{\sigma_w^2}+w\,\frac{\mu_w}{\sigma_w^2}+\text{const}.
+$$
+
+If the two expressions are the same function of $$w$$ up to a constant, the coefficient of $$w^2$$ must agree and so must the coefficient of $$w$$:
+
+$$
+\frac{1}{\sigma_w^2}=x^2+\frac1{\sigma_0^2},
+\qquad
+\frac{\mu_w}{\sigma_w^2}=xt+\frac{\mu_0}{\sigma_0^2}.
+$$
+
+Matching coefficients is legitimate because the difference of two quadratics in $$w$$ that agree for every $$w$$ is a quadratic that is zero everywhere, and that is possible only if all its coefficients are zero.
+
+**A number.** Take $$x=1$$, $$t=3$$, $$\mu_0=0$$ and $$\sigma_0^2=1$$. Then $$1/\sigma_w^2=1+1=2$$, so $$\sigma_w^2=0.5$$, and $$\mu_w=0.5\times(3+0)=1.5$$. The posterior mean sits halfway between the prior mean and the data value, because their precisions are equal.
+
+**The matrix version.** The log posterior is the quadratic of Step 2:
+
+$$
+-\tfrac12\mathbf{w}^T\big(\mathbf{X}^T\mathbf{X}+\boldsymbol{\Sigma}_0^{-1}\big)\mathbf{w}+\mathbf{w}^T\big(\mathbf{X}^T\mathbf{t}+\boldsymbol{\Sigma}_0^{-1}\boldsymbol{\mu}_0\big)+\text{const}.
+$$
+
+A Gaussian $$\mathcal{N}(\boldsymbol{\mu}_w,\boldsymbol{\Sigma}_w)$$ has log density, after expanding $$-\tfrac12(\mathbf{w}-\boldsymbol{\mu}_w)^T\boldsymbol{\Sigma}_w^{-1}(\mathbf{w}-\boldsymbol{\mu}_w)$$,
+
+$$
+-\tfrac12\mathbf{w}^T\boldsymbol{\Sigma}_w^{-1}\mathbf{w}+\mathbf{w}^T\boldsymbol{\Sigma}_w^{-1}\boldsymbol{\mu}_w+\text{const}.
+$$
+
+Matching the quadratic parts and the linear parts:
 
 $$
 \boldsymbol{\Sigma}_w^{-1}=\mathbf{X}^T\mathbf{X}+\boldsymbol{\Sigma}_0^{-1},
@@ -114,7 +159,9 @@ $$
 \boldsymbol{\Sigma}_w^{-1}\boldsymbol{\mu}_w=\mathbf{X}^T\mathbf{t}+\boldsymbol{\Sigma}_0^{-1}\boldsymbol{\mu}_0,
 $$
 
-so $$\boldsymbol{\mu}_w=\boldsymbol{\Sigma}_w\big(\mathbf{X}^T\mathbf{t}+\boldsymbol{\Sigma}_0^{-1}\boldsymbol{\mu}_0\big)$$. This is the Chapter 3 result with noise variance 1.
+so $$\boldsymbol{\mu}_w=\boldsymbol{\Sigma}_w\big(\mathbf{X}^T\mathbf{t}+\boldsymbol{\Sigma}_0^{-1}\boldsymbol{\mu}_0\big)$$. This is the Chapter 3 result with noise variance 1. The role of $$1/\sigma_w^2$$ is played by $$\boldsymbol{\Sigma}_w^{-1}$$, the role of $$x^2$$ by $$\mathbf{X}^T\mathbf{X}$$, and the role of $$xt$$ by $$\mathbf{X}^T\mathbf{t}$$.
+
+**How this relates to Steps 3 to 5.** The Laplace steps differentiate the same quadratic and solve for its peak. This step reads the coefficients off directly. Both extract the same information from one quadratic, which is why the two answers agree in Step 7.
 
 ## Step 7: comparison
 
