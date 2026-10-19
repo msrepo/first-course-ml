@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 3: The product of two Gaussians</title>
+<style>
+:root{--bg:#fff;--fg:#1f2328;--muted:#656d76;--grid:#d8dee4;--a:#1f6feb;--b:#d1242f;--p:#1a7f37;--card:#f6f8fa}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--grid:#30363d;--a:#58a6ff;--b:#ff7b72;--p:#3fb950;--card:#161b22}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:.5rem 0}
+.card{background:var(--card);border-radius:8px;padding:12px 16px;margin:12px 0}
+.row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin:6px 0}
+.row output{font-variant-numeric:tabular-nums;min-width:4em;text-align:right}
+input[type=range]{width:100%}
+svg{width:100%;height:auto;display:block;background:var(--bg);border-radius:8px}
+.axis text{fill:var(--muted);font-size:12px}
+.grid line{stroke:var(--grid)}
+.muted{color:var(--muted);font-size:.9rem}
+.opts{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+button{font:inherit;padding:4px 10px}
+.nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 16px}
+.nums div{background:var(--bg);border-radius:8px;padding:8px 12px}
+.nums b{display:block;font-size:1.2rem;font-variant-numeric:tabular-nums}
+.sticky{position:sticky;top:0;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+</style>
+</head>
+<body>
+<main>
+<h1>The product of two Gaussians</h1>
+<p class="muted">Chapter 3 · Multiply the density N(x | μ₀, σ₀²) by the density N(x | μ₁, σ₁²), as functions of the same x. The result has a Gaussian shape: precisions (1/variance) add, and the mean is the precision-weighted average of μ₀ and μ₁. The product is not itself a normalised density, and its area is a constant that depends on how far apart the two means are.</p>
+
+<div class="card opts">
+  <span class="muted">Examples:</span>
+  <button data-m0="-2" data-v0="1" data-m1="2" data-v1="1">Equal variances</button>
+  <button data-m0="-2" data-v0="0.3" data-m1="3" data-v1="4">Very different variances</button>
+  <button data-m0="-5" data-v0="1" data-m1="5" data-v1="1">Means far apart</button>
+</div>
+
+<svg id="plot" viewBox="0 0 760 380" role="img" aria-label="Two Gaussian densities, their product, and the normalised Gaussian that matches the product"></svg>
+<p class="muted"><span style="color:var(--a)">━</span> N(x | μ₀, σ₀²) &nbsp; <span style="color:var(--b)">━</span> N(x | μ₁, σ₁²) &nbsp; <span style="color:var(--p)">━</span> their product (filled, not normalised) &nbsp; <span style="color:var(--p)">╍</span> the normalised Gaussian N(x | μ, σ²) with the same shape. The axes are fixed.</p>
+
+<div class="card sticky">
+  <div class="row"><label for="m0">μ₀</label><input type="range" id="m0" min="-8" max="8" step="0.1" value="-2"><output id="m0o"></output></div>
+  <div class="row"><label for="v0">σ₀²</label><input type="range" id="v0" min="0.2" max="9" step="0.1" value="1"><output id="v0o"></output></div>
+  <div class="row"><label for="m1">μ₁</label><input type="range" id="m1" min="-8" max="8" step="0.1" value="2"><output id="m1o"></output></div>
+  <div class="row"><label for="v1">σ₁²</label><input type="range" id="v1" min="0.2" max="9" step="0.1" value="1"><output id="v1o"></output></div>
+</div>
+
+<div class="card nums">
+  <div>Precisions 1/σ₀² and 1/σ₁²<b id="prec"></b></div>
+  <div>Sum of precisions 1/σ²<b id="psum"></b></div>
+  <div>Product variance σ² = σ₀²σ₁²/(σ₀² + σ₁²)<b id="s2"></b></div>
+  <div>Product mean μ<b id="mu"></b></div>
+  <div>Area c, from the formula N(μ₀ | μ₁, σ₀² + σ₁²)<b id="cf"></b></div>
+  <div>Area under the product, found numerically<b id="cn"></b></div>
+</div>
+<div class="card muted">
+Read N(x | μ₀, σ₀²) as a prior and N(x | μ₁, σ₁²) as a likelihood centred on a measured value μ₁. The product is then the unnormalised posterior. Its precision is the prior precision plus the data precision, and its mean sits between μ₀ and μ₁, closer to the more certain one (the smaller variance). The product is always narrower than both inputs. This is exactly what happens to the weights in Bayesian linear regression.
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id), NS="http://www.w3.org/2000/svg";
+const N=(x,m,v)=>Math.exp(-((x-m)**2)/(2*v))/Math.sqrt(2*Math.PI*v);
+function el(n,a,p){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e}
+const M={l:56,r:16,t:16,b:40},W=760,H=380, LO=-12, HI=12, YMAX=1.4;
+const X=v=>M.l+(v-LO)/(HI-LO)*(W-M.l-M.r), Y=v=>H-M.b-v/YMAX*(H-M.t-M.b);
+function draw(){
+  const m0=+$("m0").value,v0=+$("v0").value,m1=+$("m1").value,v1=+$("v1").value;
+  const s2=v0*v1/(v0+v1), mu=(m0*v1+m1*v0)/(v0+v1), cf=N(m0,m1,v0+v1);
+  const n=800, xs=Array.from({length:n+1},(_,i)=>LO+(HI-LO)*i/n);
+  const prod=xs.map(x=>N(x,m0,v0)*N(x,m1,v1));
+  let area=0; for(let i=1;i<=n;i++) area+=0.5*(prod[i]+prod[i-1])*(xs[i]-xs[i-1]);
+  const svg=$("plot"); svg.innerHTML="";
+  const cp=el("clipPath",{id:"c"},el("defs",{},svg)); el("rect",{x:M.l,y:M.t,width:W-M.l-M.r,height:H-M.t-M.b},cp);
+  const g=el("g",{class:"grid"},svg),ax=el("g",{class:"axis"},svg);
+  for(let k=0;k<=7;k++){const v=YMAX*k/7;el("line",{x1:M.l,x2:W-M.r,y1:Y(v),y2:Y(v)},g);el("text",{x:M.l-6,y:Y(v)+4,"text-anchor":"end"},ax).textContent=v.toFixed(1)}
+  for(let v=LO;v<=HI;v+=4) el("text",{x:X(v),y:H-M.b+16,"text-anchor":"middle"},ax).textContent=v;
+  el("text",{x:(W+M.l)/2,y:H-6,"text-anchor":"middle"},ax).textContent="x";
+  const path=(f)=>xs.map((x,i)=>(i?"L":"M")+X(x).toFixed(1)+" "+Y(f(x,i)).toFixed(1)).join("");
+  el("path",{d:path((x,i)=>prod[i])+`L${X(HI)} ${Y(0)}L${X(LO)} ${Y(0)}Z`,fill:"var(--p)","fill-opacity":.25,stroke:"none","clip-path":"url(#c)"},svg);
+  el("path",{d:path(x=>N(x,m0,v0)),fill:"none",stroke:"var(--a)","stroke-width":2.5,"clip-path":"url(#c)"},svg);
+  el("path",{d:path(x=>N(x,m1,v1)),fill:"none",stroke:"var(--b)","stroke-width":2.5,"clip-path":"url(#c)"},svg);
+  el("path",{d:path((x,i)=>prod[i]),fill:"none",stroke:"var(--p)","stroke-width":2.5,"clip-path":"url(#c)"},svg);
+  el("path",{d:path(x=>N(x,mu,s2)),fill:"none",stroke:"var(--p)","stroke-width":2,"stroke-dasharray":"6 4","clip-path":"url(#c)"},svg);
+  [[m0,"var(--a)"],[m1,"var(--b)"],[mu,"var(--p)"]].forEach(([m,c])=>el("line",{x1:X(m),x2:X(m),y1:H-M.b,y2:H-M.b-8,stroke:c,"stroke-width":3},svg));
+  $("m0o").textContent=m0.toFixed(1);$("v0o").textContent=v0.toFixed(1);$("m1o").textContent=m1.toFixed(1);$("v1o").textContent=v1.toFixed(1);
+  $("prec").textContent=`${(1/v0).toFixed(3)}, ${(1/v1).toFixed(3)}`; $("psum").textContent=(1/v0+1/v1).toFixed(3);
+  $("s2").textContent=s2.toFixed(3); $("mu").textContent=mu.toFixed(3);
+  $("cf").textContent=cf.toExponential(3); $("cn").textContent=area.toExponential(3);
+}
+["m0","v0","m1","v1"].forEach(id=>$(id).addEventListener("input",draw));
+document.querySelectorAll("button[data-m0]").forEach(b=>b.onclick=()=>{$("m0").value=b.dataset.m0;$("v0").value=b.dataset.v0;$("m1").value=b.dataset.m1;$("v1").value=b.dataset.v1;draw()});
+draw();
+</script>
+</body>
+</html>
