@@ -2,7 +2,7 @@
 title: Chapter 3 summary, the Bayesian approach
 ---
 
-<script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-AMS_HTML"></script>
+<script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-AMS_SVG"></script>
 
 # Chapter 3: The Bayesian approach, a quick recap
 
