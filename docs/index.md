@@ -75,11 +75,16 @@ Notes by chapter (work in progress).
 - [Interactive: the gamma density and its Laplace approximation](chapter4-gamma-laplace.html)
 - [Interactive: Laplace approximation for the binary response model](chapter4-laplace-binary.html)
 
+**Sampling: Metropolis–Hastings**
+
+- [Interactive: the random walk, trace plots and histograms against the Laplace approximation](chapter4-poisson-mcmc.html)
+
 **Exercises**
 
 - [Notes: Exercise 4.1, the Laplace approximation is exact for a linear Gaussian model](chapter4-exercise-4-1.html)
 - [Notes: Exercise 4.2, the Laplace approximation to the coin posterior](chapter4-exercise-4-2.html)
 - [Notes: Exercise 4.6, Poisson regression and the MAP solution](chapter4-exercise-4-6.html)
+- [Notes: Exercises 4.7 and 4.8, Laplace and Metropolis–Hastings for Poisson regression](chapter4-exercise-4-8.html)
 - [Interactive: Exercise 4.3, the coin posterior and its Laplace approximation](chapter4-beta-laplace.html)
 
 ## Chapter 5: Classification

@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 4: Metropolis-Hastings random walk for Poisson regression</title>
+<style>
+:root{--bg:#fff;--fg:#1f2328;--muted:#656d76;--grid:#d8dee4;--a:#1f6feb;--b:#d1242f;--ok:#1a7f37;--burn:#bf8700;--card:#f6f8fa}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--grid:#30363d;--a:#58a6ff;--b:#ff7b72;--ok:#3fb950;--burn:#d29922;--card:#161b22}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
+main{max-width:960px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:.5rem 0}
+h2{font-size:1.05rem;margin:1.1rem 0 .3rem}
+.card{background:var(--card);border-radius:8px;padding:12px 16px;margin:12px 0}
+.row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin:6px 0}
+.row output{font-variant-numeric:tabular-nums;min-width:4.5em;text-align:right}
+input[type=range]{width:100%}
+svg{width:100%;height:auto;display:block;background:var(--bg);border-radius:8px}
+.axis text{fill:var(--muted);font-size:12px}
+.grid line{stroke:var(--grid)}
+.muted{color:var(--muted);font-size:.9rem}
+.opts{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+button{font:inherit;padding:4px 10px}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.cols{grid-template-columns:minmax(0,1fr)}}
+.nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px 16px}
+.nums div{background:var(--bg);border-radius:8px;padding:8px 12px}
+.nums b{display:block;font-size:1.05rem;font-variant-numeric:tabular-nums}
+.sticky{position:sticky;top:0;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+@media (max-width:760px){.sticky{position:static}}
+</style>
+</head>
+<body>
+<main>
+<h1>Metropolis–Hastings: a random walk on the Poisson posterior</h1>
+<p class="muted">Chapter 4, Exercise 4.8 · The model is Poisson regression, t<sub>n</sub> ~ Poisson(exp(w<sub>1</sub> + w<sub>2</sub>u<sub>n</sub>)), with a Gaussian prior N(0, σ²I) on the two weights. We can evaluate g(w) = prior × likelihood at any w but not the normaliser, so we sample with a random walk: propose a nearby w*, accept it with probability min(1, g(w*)/g(w)), otherwise stay put. The data are synthetic and are the same as in the Python script (the first n of 60 points).</p>
+
+<div class="card sticky">
+  <div class="row"><label for="n">Observations used n</label><input type="range" id="n" min="3" max="60" step="1" value="20"><output id="no"></output></div>
+  <div class="row"><label for="s2">Prior variance σ²</label><input type="range" id="s2" min="1" max="50" step="1" value="10"><output id="s2o"></output></div>
+  <div class="row"><label for="st">Proposal step size</label><input type="range" id="st" min="0.005" max="1.5" step="0.005" value="0.25"><output id="sto"></output></div>
+  <div class="row"><label for="bu">Burn-in (samples discarded)</label><input type="range" id="bu" min="0" max="3000" step="50" value="200"><output id="buo"></output></div>
+  <div class="opts">
+    <button id="b1">Step</button><button id="b100">Run 100</button><button id="b1000">Run 1000</button><button id="auto">Start / stop running</button>
+    <button id="rmode">Restart at the mode</button><button id="rfar">Restart far from the mode</button><button id="rule">Rule-of-thumb step size</button>
+  </div>
+</div>
+
+<h2>The walk in weight space</h2>
+<svg id="ws" viewBox="0 0 760 440" role="img" aria-label="Contours of the posterior, the Laplace ellipses and the Metropolis-Hastings random walk"></svg>
+<p class="muted"><span style="color:var(--a)">━</span> contours of the true unnormalised posterior g(w) at drops of 0.5, 2, 4.5 and 8 in log height &nbsp; <span style="color:var(--b)">╍</span> Laplace Gaussian at the same drops &nbsp; <span style="color:var(--ok)">◆</span> mode &nbsp; <span style="color:var(--burn)">●</span> burn-in samples (discarded) &nbsp; <span style="color:var(--a)">●</span> kept samples &nbsp; grey line: the last 150 steps &nbsp; ● black: the current point &nbsp; the dashed segment shows the latest proposal: <span style="color:var(--ok)">green</span> if accepted, <span style="color:var(--b)">red cross</span> if rejected.</p>
+
+<h2>Trace plots</h2>
+<svg id="tr" viewBox="0 0 760 300" role="img" aria-label="Trace plots of the two weights along the chain"></svg>
+<p class="muted">Each weight along the chain. A good chain wanders around a level without drifting. The dashed vertical line marks the end of burn-in. The red line is the Laplace mean and the pale band is ±2 Laplace standard deviations.</p>
+
+<h2>Marginal histograms against the Laplace approximation</h2>
+<div class="cols">
+  <svg id="h1" viewBox="0 0 380 240" role="img" aria-label="Histogram of w1 samples with the Laplace Gaussian"></svg>
+  <svg id="h2" viewBox="0 0 380 240" role="img" aria-label="Histogram of w2 samples with the Laplace Gaussian"></svg>
+</div>
+<p class="muted">Bars: kept samples, which approximate the true posterior. Red curve: the Laplace Gaussian. Dotted line: the sample mean.</p>
+
+<div class="card nums">
+  <div>Iterations / acceptance rate<b id="r1"></b></div>
+  <div>Acceptance rate, last 200 steps<b id="r2"></b></div>
+  <div>Latest proposal<b id="r3"></b></div>
+  <div>Kept samples<b id="r4"></b></div>
+  <div>Mean of samples vs the mode (Laplace mean)<b id="r5"></b></div>
+  <div>Std of samples vs Laplace std<b id="r6"></b></div>
+  <div>Correlation of w₁, w₂: samples vs Laplace<b id="r7"></b></div>
+  <div>Lag-1 autocorrelation of w₁<b id="r8"></b></div>
+</div>
+<div class="card muted">
+What to try: (1) Restart far from the mode with a small burn-in and watch the walk head to the high-density region: those first points are the burn-in. (2) Make the step size tiny: almost every proposal is accepted, but the walk crawls, so the trace is smooth and the autocorrelation is close to 1. (3) Make it huge: almost every proposal is rejected, so the chain sits still for long stretches. The rule-of-thumb step (about 2.4/√D times the posterior standard deviation) gives an acceptance rate near 30%. (4) Lower n: the posterior becomes wider and more skewed, and the sample mean separates from the mode, while the Laplace Gaussian stays centred on the mode.
+</div>
+</main>
+<script>
+const U=[-1.2711, 0.8398, -0.1848, 0.6704, 1.434, 0.1155, 0.0034, -1.2838, -0.6947, -0.0004, 0.5377, 0.9112, -0.3572, -1.3022, -0.6356, 1.2288, -0.8598, -0.1436, 1.2936, -1.4253, 0.3016, 1.3504, -0.8091, 0.1455, 1.2274, -1.1005, 0.0702, 0.7512, 0.507, -0.0967, -0.8855, -0.0277, -0.3828, -0.0678, -0.4023, 1.0138, 0.8059, -0.558, 0.2179, -0.6719, -0.1415, -0.4411, 0.4722, -0.3889, -0.1227, 0.658, -0.261, 1.2193, -0.9586, 0.7234, -0.2329, -0.2206, 0.4031, 0.0687, -0.2553, -1.4957, -1.2232, 0.6282, 0.073, 0.5885], T=[2, 8, 3, 3, 12, 5, 1, 1, 2, 2, 2, 6, 1, 1, 2, 8, 2, 3, 3, 0, 1, 4, 0, 4, 6, 1, 2, 3, 3, 3, 0, 2, 2, 2, 2, 7, 7, 1, 5, 1, 1, 2, 5, 3, 3, 5, 3, 6, 2, 3, 4, 0, 3, 2, 2, 1, 2, 2, 1, 1];
+const $=id=>document.getElementById(id), NS="http://www.w3.org/2000/svg";
+const randn=()=>Math.sqrt(-2*Math.log(1-Math.random()))*Math.cos(2*Math.PI*Math.random());
+function el(n,a,p){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e}
+let n=20,s2=10,step=0.25,burn=200;
+let mapw,Sig,sdL,rho,dom,vals,levels,GN=60;
+let chain=[],cur,curLg,acc=0,flags=[],last=null,timer=null;
+function logg(w){let L=-(w[0]*w[0]+w[1]*w[1])/(2*s2);for(let i=0;i<n;i++){const z=w[0]+w[1]*U[i];L+=T[i]*z-Math.exp(z)}return L}
+function gradHess(w){let g=[-w[0]/s2,-w[1]/s2],H=[[-1/s2,0],[0,-1/s2]];
+  for(let i=0;i<n;i++){const x=U[i],V=Math.exp(w[0]+w[1]*x),r=T[i]-V;g[0]+=r;g[1]+=r*x;H[0][0]-=V;H[0][1]-=V*x;H[1][0]-=V*x;H[1][1]-=V*x*x}
+  return{g,H}}
+function newton(){let w=[0,0];for(let k=0;k<100;k++){const {g,H}=gradHess(w),det=H[0][0]*H[1][1]-H[0][1]*H[1][0],d=[(H[1][1]*g[0]-H[0][1]*g[1])/det,(-H[1][0]*g[0]+H[0][0]*g[1])/det];w=[w[0]-d[0],w[1]-d[1]];if(Math.hypot(d[0],d[1])<1e-10)break}return w}
+function setup(){
+  mapw=newton();const {H}=gradHess(mapw),A=[[-H[0][0],-H[0][1]],[-H[1][0],-H[1][1]]],det=A[0][0]*A[1][1]-A[0][1]*A[1][0];
+  Sig=[[A[1][1]/det,-A[0][1]/det],[-A[1][0]/det,A[0][0]/det]];sdL=[Math.sqrt(Sig[0][0]),Math.sqrt(Sig[1][1])];rho=Sig[0][1]/(sdL[0]*sdL[1]);
+  dom=[[mapw[0]-4*sdL[0],mapw[0]+4*sdL[0]],[mapw[1]-4*sdL[1],mapw[1]+4*sdL[1]]];
+  vals=new Float64Array(GN*GN);
+  for(let j=0;j<GN;j++)for(let i=0;i<GN;i++)vals[j*GN+i]=logg([dom[0][0]+(i+.5)*(dom[0][1]-dom[0][0])/GN,dom[1][0]+(j+.5)*(dom[1][1]-dom[1][0])/GN]);
+  levels=[0.5,2,4.5,8].map(k=>logg(mapw)-k);
+  // Laplace ellipse axes (eigen-decomposition of the precision matrix A)
+  const tr=A[0][0]+A[1][1],ds=Math.sqrt(Math.max(tr*tr/4-det,0));
+  ell={l:[tr/2+ds,Math.max(tr/2-ds,1e-12)],th:0.5*Math.atan2(2*A[0][1],A[0][0]-A[1][1])};
+}
+let ell;
+function rule(){return 2.4/Math.sqrt(2)*(sdL[0]+sdL[1])/2}
+function restart(far){cur=far?[mapw[0]+3.5*sdL[0],mapw[1]+3.5*sdL[1]]:mapw.slice();curLg=logg(cur);chain=[cur];acc=0;flags=[];last=null;draw()}
+function mh(){const from=cur,prop=[cur[0]+step*randn(),cur[1]+step*randn()],lp=logg(prop),logr=lp-curLg,ok=Math.log(Math.random())<logr;
+  if(ok){cur=prop;curLg=lp;acc++}flags.push(ok?1:0);chain.push(cur);last={from,prop,logr,ok};if(chain.length>200000){chain.shift()}}
+function run(k){for(let i=0;i<k;i++)mh();draw()}
+const X=(v,svgW,m)=>m.l+(v-dom[0][0])/(dom[0][1]-dom[0][0])*(svgW-m.l-m.r);
+function ticks(svg,x0,x1,y0,y1,X,Y,xl,yl,W,H,fx,fy,nt=5){
+  const g=el("g",{class:"grid"},svg),a=el("g",{class:"axis"},svg);
+  for(let k=0;k<nt;k++){const vx=x0+(x1-x0)*k/(nt-1),vy=y0+(y1-y0)*k/(nt-1);
+    el("line",{x1:X(vx),x2:X(vx),y1:Y(y0),y2:Y(y1)},g);el("line",{x1:X(x0),x2:X(x1),y1:Y(vy),y2:Y(vy)},g);
+    el("text",{x:X(vx),y:Y(y0)+16,"text-anchor":"middle"},a).textContent=fx(vx);el("text",{x:X(x0)-6,y:Y(vy)+4,"text-anchor":"end"},a).textContent=fy(vy)}
+  el("text",{x:(X(x0)+X(x1))/2,y:H-5,"text-anchor":"middle"},a).textContent=xl;
+  el("text",{transform:`translate(13 ${(Y(y0)+Y(y1))/2}) rotate(-90)`,"text-anchor":"middle"},a).textContent=yl}
+function drawWS(){
+  const svg=$("ws");svg.innerHTML="";const W=760,H=440,m={l:56,r:16,t:12,b:40};
+  const Xs=v=>m.l+(v-dom[0][0])/(dom[0][1]-dom[0][0])*(W-m.l-m.r),Ys=v=>H-m.b-(v-dom[1][0])/(dom[1][1]-dom[1][0])*(H-m.t-m.b);
+  const cp=el("clipPath",{id:"cw"},el("defs",{},svg));el("rect",{x:m.l,y:m.t,width:W-m.l-m.r,height:H-m.t-m.b},cp);
+  ticks(svg,dom[0][0],dom[0][1],dom[1][0],dom[1][1],Xs,Ys,"w₁","w₂",W,H,v=>v.toFixed(2),v=>v.toFixed(2));
+  const gp=el("g",{"clip-path":"url(#cw)"},svg),cw=(W-m.l-m.r)/GN,ch=(H-m.t-m.b)/GN;
+  let d="";
+  for(const lev of levels){for(let j=0;j<GN-1;j++)for(let i=0;i<GN-1;i++){
+    const v=[vals[j*GN+i],vals[j*GN+i+1],vals[(j+1)*GN+i+1],vals[(j+1)*GN+i]],pt=[[i+.5,j+.5],[i+1.5,j+.5],[i+1.5,j+1.5],[i+.5,j+1.5]],e=[];
+    for(let k=0;k<4;k++){const a=v[k],b=v[(k+1)%4];if((a-lev)*(b-lev)<0){const f=(lev-a)/(b-a),p=pt[k],q=pt[(k+1)%4];e.push([m.l+(p[0]+f*(q[0]-p[0]))*cw,H-m.b-(p[1]+f*(q[1]-p[1]))*ch])}}
+    if(e.length===2)d+=`M${e[0][0].toFixed(1)} ${e[0][1].toFixed(1)}L${e[1][0].toFixed(1)} ${e[1][1].toFixed(1)}`;
+    else if(e.length===4)d+=`M${e[0][0].toFixed(1)} ${e[0][1].toFixed(1)}L${e[1][0].toFixed(1)} ${e[1][1].toFixed(1)}M${e[2][0].toFixed(1)} ${e[2][1].toFixed(1)}L${e[3][0].toFixed(1)} ${e[3][1].toFixed(1)}`}}
+  el("path",{d,fill:"none",stroke:"var(--a)","stroke-width":1.8},gp);
+  const v1=[Math.cos(ell.th),Math.sin(ell.th)],v2=[-Math.sin(ell.th),Math.cos(ell.th)];
+  [0.5,2,4.5,8].forEach(k=>{let e="";const r=Math.sqrt(2*k);for(let q=0;q<=100;q++){const a=2*Math.PI*q/100,p1=r*Math.cos(a)/Math.sqrt(ell.l[0]),p2=r*Math.sin(a)/Math.sqrt(ell.l[1]);
+    e+=(q?"L":"M")+Xs(mapw[0]+p1*v1[0]+p2*v2[0]).toFixed(1)+" "+Ys(mapw[1]+p1*v1[1]+p2*v2[1]).toFixed(1)}
+    el("path",{d:e,fill:"none",stroke:"var(--b)","stroke-width":1.5,"stroke-dasharray":"5 4"},gp)});
+  const start=Math.max(0,chain.length-4000);
+  for(let i=start;i<chain.length;i++)el("circle",{cx:Xs(chain[i][0]),cy:Ys(chain[i][1]),r:1.6,fill:i<burn?"var(--burn)":"var(--a)","fill-opacity":.35},gp);
+  const tail=chain.slice(-150);if(tail.length>1)el("path",{d:tail.map((p,i)=>(i?"L":"M")+Xs(p[0]).toFixed(1)+" "+Ys(p[1]).toFixed(1)).join(""),fill:"none",stroke:"var(--muted)","stroke-width":1.2},gp);
+  if(last){el("line",{x1:Xs(last.from[0]),y1:Ys(last.from[1]),x2:Xs(last.prop[0]),y2:Ys(last.prop[1]),stroke:last.ok?"var(--ok)":"var(--b)","stroke-width":2,"stroke-dasharray":"4 3"},gp);
+    if(last.ok)el("circle",{cx:Xs(last.prop[0]),cy:Ys(last.prop[1]),r:5,fill:"none",stroke:"var(--ok)","stroke-width":2},gp);
+    else{const x=Xs(last.prop[0]),y=Ys(last.prop[1]);el("path",{d:`M${x-5} ${y-5}L${x+5} ${y+5}M${x-5} ${y+5}L${x+5} ${y-5}`,stroke:"var(--b)","stroke-width":2.2},gp)}}
+  el("circle",{cx:Xs(cur[0]),cy:Ys(cur[1]),r:5,fill:"var(--fg)",stroke:"var(--bg)","stroke-width":1.5},gp);
+  el("path",{d:`M${Xs(mapw[0])} ${Ys(mapw[1])-8}L${Xs(mapw[0])+8} ${Ys(mapw[1])}L${Xs(mapw[0])} ${Ys(mapw[1])+8}L${Xs(mapw[0])-8} ${Ys(mapw[1])}Z`,fill:"var(--ok)",stroke:"var(--bg)","stroke-width":1.5},svg)}
+function drawTrace(){
+  const svg=$("tr");svg.innerHTML="";const W=760,H=300,m={l:56,r:16};const L=chain.length,N=Math.min(L,1500),stride=Math.max(1,Math.floor(L/N));
+  [0,1].forEach(j=>{const t0=j?160:10,t1=j?290:140,y0=dom[j][0],y1=dom[j][1];
+    const Xs=i=>m.l+i/Math.max(L-1,1)*(W-m.l-m.r),Ys=v=>t1-(v-y0)/(y1-y0)*(t1-t0);
+    const g=el("g",{class:"grid"},svg),a=el("g",{class:"axis"},svg);
+    for(let k=0;k<3;k++){const v=y0+(y1-y0)*k/2;el("line",{x1:m.l,x2:W-m.r,y1:Ys(v),y2:Ys(v)},g);el("text",{x:m.l-6,y:Ys(v)+4,"text-anchor":"end"},a).textContent=v.toFixed(2)}
+    el("text",{transform:`translate(13 ${(t0+t1)/2}) rotate(-90)`,"text-anchor":"middle"},a).textContent=j?"w₂":"w₁";
+    if(j)el("text",{x:(m.l+W-m.r)/2,y:H-3,"text-anchor":"middle"},a).textContent="iteration (0 to "+(L-1)+")";
+    el("rect",{x:m.l,y:Ys(mapw[j]+2*sdL[j]),width:W-m.l-m.r,height:Ys(mapw[j]-2*sdL[j])-Ys(mapw[j]+2*sdL[j]),fill:"var(--b)","fill-opacity":.1},svg);
+    el("line",{x1:m.l,x2:W-m.r,y1:Ys(mapw[j]),y2:Ys(mapw[j]),stroke:"var(--b)","stroke-width":1.2},svg);
+    const pts=[];for(let i=0;i<L;i+=stride)pts.push(i);
+    const cp=el("clipPath",{id:"ct"+j},el("defs",{},svg));el("rect",{x:m.l,y:t0,width:W-m.l-m.r,height:t1-t0},cp);
+    el("path",{d:pts.map((i,k)=>(k?"L":"M")+Xs(i).toFixed(1)+" "+Ys(chain[i][j]).toFixed(1)).join(""),fill:"none",stroke:"var(--a)","stroke-width":1.2,"clip-path":`url(#ct${j})`},svg);
+    if(burn<L)el("line",{x1:Xs(burn),x2:Xs(burn),y1:t0,y2:t1,stroke:"var(--burn)","stroke-dasharray":"4 3","stroke-width":1.6},svg)})}
+function drawHist(id,j){
+  const svg=$(id);svg.innerHTML="";const W=380,H=240,m={l:44,r:10,t:10,b:34};
+  const kept=chain.slice(burn).map(p=>p[j]),a0=dom[j][0],a1=dom[j][1],B=30,bw=(a1-a0)/B,cnt=new Array(B).fill(0);
+  kept.forEach(v=>{const b=Math.floor((v-a0)/bw);if(b>=0&&b<B)cnt[b]++});
+  const dens=cnt.map(c=>kept.length?c/(kept.length*bw):0),gm=x=>Math.exp(-((x-mapw[j])**2)/(2*sdL[j]**2))/(sdL[j]*Math.sqrt(2*Math.PI));
+  const ymax=Math.max(gm(mapw[j]),...dens)*1.15;
+  const Xs=v=>m.l+(v-a0)/(a1-a0)*(W-m.l-m.r),Ys=v=>H-m.b-v/ymax*(H-m.t-m.b);
+  ticks(svg,a0,a1,0,ymax,Xs,Ys,j?"w₂":"w₁","density",W,H,v=>v.toFixed(2),v=>v.toFixed(1),4);
+  dens.forEach((d,b)=>el("rect",{x:Xs(a0+b*bw)+.5,y:Ys(d),width:Math.max(1,Xs(a0+bw)-Xs(a0)-1),height:Ys(0)-Ys(d),fill:"var(--a)","fill-opacity":.55},svg));
+  const xs=Array.from({length:200},(_,i)=>a0+(a1-a0)*i/199);
+  el("path",{d:xs.map((x,i)=>(i?"L":"M")+Xs(x).toFixed(1)+" "+Ys(gm(x)).toFixed(1)).join(""),fill:"none",stroke:"var(--b)","stroke-width":2.2},svg);
+  if(kept.length){const mu=kept.reduce((s,v)=>s+v,0)/kept.length;el("line",{x1:Xs(mu),x2:Xs(mu),y1:Ys(0),y2:Ys(ymax),stroke:"var(--fg)","stroke-dasharray":"2 3"},svg)}}
+function stats(){
+  const kept=chain.slice(burn),K=kept.length,it=chain.length-1;
+  $("r1").textContent=it+" / "+(it?(100*acc/it).toFixed(1)+"%":"–");
+  const rec=flags.slice(-200);$("r2").textContent=rec.length?(100*rec.reduce((s,v)=>s+v,0)/rec.length).toFixed(1)+"%":"–";
+  $("r3").textContent=last?(last.ok?"accepted":"rejected")+", log ratio "+last.logr.toFixed(2):"–";
+  $("r4").textContent=K;
+  if(K>2){const m=[0,1].map(j=>kept.reduce((s,p)=>s+p[j],0)/K),v=[0,1].map(j=>kept.reduce((s,p)=>s+(p[j]-m[j])**2,0)/(K-1)),c=kept.reduce((s,p)=>s+(p[0]-m[0])*(p[1]-m[1]),0)/(K-1);
+    $("r5").textContent=`(${m[0].toFixed(3)}, ${m[1].toFixed(3)}) vs (${mapw[0].toFixed(3)}, ${mapw[1].toFixed(3)})`;
+    $("r6").textContent=`(${Math.sqrt(v[0]).toFixed(3)}, ${Math.sqrt(v[1]).toFixed(3)}) vs (${sdL[0].toFixed(3)}, ${sdL[1].toFixed(3)})`;
+    $("r7").textContent=`${(c/Math.sqrt(v[0]*v[1])).toFixed(3)} vs ${rho.toFixed(3)}`;
+    let num=0;for(let i=1;i<K;i++)num+=(kept[i][0]-m[0])*(kept[i-1][0]-m[0]);$("r8").textContent=(num/((K-1)*v[0])).toFixed(3)}
+  else{["r5","r6","r7","r8"].forEach(id=>$(id).textContent="–")}}
+function draw(){drawWS();drawTrace();drawHist("h1",0);drawHist("h2",1);stats();
+  $("no").textContent=n;$("s2o").textContent=s2;$("sto").textContent=step.toFixed(3);$("buo").textContent=burn}
+function paramsChanged(){n=+$("n").value;s2=+$("s2").value;setup();step=rule();$("st").value=step;restart(true)}
+$("n").addEventListener("input",paramsChanged);$("s2").addEventListener("input",paramsChanged);
+$("st").addEventListener("input",()=>{step=+$("st").value;draw()});
+$("bu").addEventListener("input",()=>{burn=+$("bu").value;draw()});
+$("b1").onclick=()=>run(1);$("b100").onclick=()=>run(100);$("b1000").onclick=()=>run(1000);
+$("rmode").onclick=()=>restart(false);$("rfar").onclick=()=>restart(true);
+$("rule").onclick=()=>{step=rule();$("st").value=step;draw()};
+$("auto").onclick=()=>{if(timer){clearInterval(timer);timer=null}else timer=setInterval(()=>run(25),60)};
+paramsChanged();
+</script>
+</body>
+</html>
