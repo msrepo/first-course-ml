@@ -35,6 +35,7 @@ Notes by chapter (work in progress).
 - [The numerator of the posterior and what is intractable](chapter4-numerator-and-posterior.html)
 - [Interactive: Newton-Raphson step by step](chapter4-newton-raphson.html)
 - [Exercise 4.1: the Laplace approximation is exact for a linear Gaussian model](chapter4-exercise-4-1.html)
+- [Exercise 4.2: the Laplace approximation to the coin posterior](chapter4-exercise-4-2.html)
 - [Interactive: the gamma density and its Laplace approximation](chapter4-gamma-laplace.html)
 - [Interactive: Laplace approximation for the binary response model](chapter4-laplace-binary.html)
 
