@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 4: When random-walk MCMC struggles</title>
+<style>
+:root{--bg:#fff;--fg:#1f2328;--muted:#656d76;--grid:#d8dee4;--a:#1f6feb;--b:#d97706;--r:#d1242f;--ok:#1a7f37;--card:#f6f8fa}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--grid:#30363d;--a:#58a6ff;--b:#f0883e;--r:#ff7b72;--ok:#3fb950;--card:#161b22}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
+main{max-width:960px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:.5rem 0}h2{font-size:1.05rem;margin:1.1rem 0 .3rem}
+.card{background:var(--card);border-radius:8px;padding:12px 16px;margin:12px 0}
+.row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin:6px 0}
+.row output{font-variant-numeric:tabular-nums;min-width:4.5em;text-align:right}
+input[type=range]{width:100%}
+svg{width:100%;height:auto;display:block;background:var(--bg);border-radius:8px}
+.axis text{fill:var(--muted);font-size:12px}.grid line{stroke:var(--grid)}
+.muted{color:var(--muted);font-size:.9rem}
+.opts{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+button,select{font:inherit;padding:4px 10px}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.cols{grid-template-columns:minmax(0,1fr)}}
+.nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px 16px}
+.nums div{background:var(--bg);border-radius:8px;padding:8px 12px}
+.nums b{display:block;font-size:1.02rem;font-variant-numeric:tabular-nums}
+.sticky{position:sticky;top:0;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+@media (max-width:760px){.sticky{position:static}}
+.warn{color:var(--r)}
+</style>
+</head>
+<body>
+<main>
+<h1>When the random walk goes wrong</h1>
+<p class="muted">Chapter 4 · The Metropolis–Hastings random walk of Exercise 4.8 works well when the posterior is one compact, roughly round blob. This page uses a simpler two-weight target so that you can break it on purpose. Two chains run with the same Gaussian proposal of one step size, one starting at the mode and one starting at a random place with non-negligible density. Compare the walk with the true density, and the histograms with both the true marginals and the Laplace approximation (a Gaussian at the highest mode).</p>
+
+<div class="card sticky">
+  <div class="row"><label for="tg">Target</label>
+    <select id="tg"><option value="bi">Bimodal: two separated blobs</option><option value="sk">Skewed: Gamma-shaped weights</option><option value="ba">Curved ridge (banana)</option><option value="co">Strongly correlated weights</option></select><span></span></div>
+  <div class="row"><label for="pr" id="prl"></label><input type="range" id="pr"><output id="pro"></output></div>
+  <div class="row"><label for="st">Proposal step size</label><input type="range" id="st" min="0.02" max="4" step="0.01" value="0.8"><output id="sto"></output></div>
+  <div class="row"><label for="bu">Burn-in (per chain)</label><input type="range" id="bu" min="0" max="2000" step="50" value="200"><output id="buo"></output></div>
+  <div class="opts"><button id="b1000">Run 1000</button><button id="b10000">Run 10000</button><button id="auto">Start / stop running</button><button id="reset">Restart both chains</button><button id="rule">Step: 2.4/√2 × smallest marginal sd</button></div>
+</div>
+<div id="desc" class="card muted"></div>
+
+<h2>The walk in weight space</h2>
+<svg id="ws" viewBox="0 0 760 440" role="img" aria-label="Target contours with the two Markov chains"></svg>
+<p class="muted">Blue lines: contours of the true target at log-height drops of 0.5, 2, 4.5 and 8. Dashed red: the Laplace Gaussian at the same drops. <span style="color:var(--a)">●</span> chain 1 (starts at the highest mode), <span style="color:var(--b)">●</span> chain 2 (starts elsewhere); lines show the last 150 steps of each, and the large dots are the current points. Diamond: the mode.</p>
+
+<h2>Trace plots</h2>
+<svg id="tr" viewBox="0 0 760 300" role="img" aria-label="Trace plots of both chains"></svg>
+<p class="muted">Both chains, for each weight. If the chains have converged and mix well they overlap and look like noise around the same level. Dashed vertical line: end of burn-in.</p>
+
+<h2>Marginals: true, Laplace and sampled</h2>
+<div class="cols"><svg id="h1" viewBox="0 0 380 240"></svg><svg id="h2" viewBox="0 0 380 240"></svg></div>
+<p class="muted">Bars: pooled samples of both chains after burn-in. Solid grey curve: the true marginal (computed on a grid). Dashed red: the Laplace Gaussian.</p>
+
+<div class="card nums">
+  <div>Iterations per chain / acceptance rate<b id="r1"></b></div>
+  <div>Between-chain agreement R̂ for w₁ (1.0 is good, above 1.1 is bad)<b id="r2"></b></div>
+  <div>Effective sample size of w₁, chain 1 (last 5000 kept)<b id="r3"></b></div>
+  <div>Lag-1 autocorrelation of w₁, chain 1<b id="r4"></b></div>
+  <div>Pooled mean: samples vs truth<b id="r5"></b></div>
+  <div>Pooled std: samples vs truth vs Laplace<b id="r6"></b></div>
+  <div id="r7box">Time spent left / right of the middle, mode switches (chain 1)<b id="r7"></b></div>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id),NS="http://www.w3.org/2000/svg";
+const randn=()=>Math.sqrt(-2*Math.log(1-Math.random()))*Math.cos(2*Math.PI*Math.random());
+function el(n,a,p){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e}
+const lse=(a,b)=>{const m=Math.max(a,b);return m===-Infinity?m:m+Math.log(Math.exp(a-m)+Math.exp(b-m))};
+const TG={
+ bi:{lab:"separation of the two blobs",min:2,max:12,step:.5,val:7,dom:[[-9,9],[-6,6]],
+  lp:(x,y,d)=>lse(-((x+d/2)**2+y*y)/2,-((x-d/2)**2+y*y)/2),
+  desc:"Two equal Gaussian blobs. A random walk with a small step can only creep, so it never crosses the low-density gap: each chain stays in the blob where it started, R̂ is far above 1, and the pooled histogram has the wrong weights (it depends on where the chains happened to start). The Laplace approximation fits only one blob. Try making the gap smaller, or the step much larger, and watch what changes."},
+ sk:{lab:"shape k of the Gamma weights",min:1.5,max:8,step:.5,val:2.5,dom:[[0,14],[0,14]],
+  lp:(x,y,k)=>(x<=0||y<=0)?-Infinity:(k-1)*(Math.log(x)+Math.log(y))-x-y,
+  desc:"Each weight has a skewed Gamma density with a hard edge at zero and a long right tail. The Laplace Gaussian is symmetric and centred on the mode, which sits to the left of the mean, so it puts mass on negative weights and misses the tail. The random walk gets the shape right but wastes proposals that fall off the edge, and a step that suits the tail is too big near the edge. Lower k makes the skew stronger."},
+ ba:{lab:"curvature b of the ridge",min:0,max:.5,step:.01,val:.3,dom:[[-6,6],[-3,11]],
+  lp:(x,y,b)=>-x*x/(2*2.25)-(y-b*x*x)**2/(2*.25),
+  desc:"The high-density region is a thin curved ridge. The posterior is narrow across the ridge and wide along it, so the proposal step must be small to stay on the ridge, which makes motion along it slow. The Laplace Gaussian is a straight ellipse at the mode and cannot follow the curve. With b = 0 the target is an ordinary Gaussian and everything works."},
+ co:{lab:"correlation ρ between the weights",min:0,max:.999,step:.001,val:.98,dom:[[-4,4],[-4,4]],
+  lp:(x,y,r)=>-(x*x-2*r*x*y+y*y)/(2*(1-r*r)),
+  desc:"A Gaussian, so the Laplace approximation is exact, but the weights are strongly correlated. The posterior is a thin diagonal sliver. A step sized for the thin direction crawls along the long one, and a step sized for the long one is almost always rejected, so the chain moves slowly either way. The effective sample size drops and the lag-1 autocorrelation approaches 1."}};
+const W=760,H=440;
+let tg="bi",par=7,step=.8,burn=200,GN=110,dom,logv,vmax,dens,margX,margY,mode,Sig,lap,sdL,sdT,meanT,levels,A=[],Bc=[],acc=[0,0],nsteps=0,timer=null;
+const lp=(x,y)=>TG[tg].lp(x,y,par);
+function setup(){
+  dom=TG[tg].dom;logv=new Float64Array(GN*GN);let mx=-Infinity,bi=0;
+  const gx=i=>dom[0][0]+(i+.5)*(dom[0][1]-dom[0][0])/GN,gy=j=>dom[1][0]+(j+.5)*(dom[1][1]-dom[1][0])/GN;
+  for(let j=0;j<GN;j++)for(let i=0;i<GN;i++){const v=lp(gx(i),gy(j));logv[j*GN+i]=v;if(v>mx){mx=v;bi=j*GN+i}}
+  vmax=mx;dens=logv.map(v=>Math.exp(v-mx));let Z=0;dens.forEach(v=>Z+=v);
+  margX=new Float64Array(GN);margY=new Float64Array(GN);for(let j=0;j<GN;j++)for(let i=0;i<GN;i++){const d=dens[j*GN+i]/Z;margX[i]+=d;margY[j]+=d}
+  const dx=(dom[0][1]-dom[0][0])/GN,dy=(dom[1][1]-dom[1][0])/GN;
+  meanT=[0,0];sdT=[0,0];for(let i=0;i<GN;i++){meanT[0]+=margX[i]*gx(i);meanT[1]+=margY[i]*gy(i)}
+  for(let i=0;i<GN;i++){sdT[0]+=margX[i]*(gx(i)-meanT[0])**2;sdT[1]+=margY[i]*(gy(i)-meanT[1])**2}sdT=sdT.map(Math.sqrt);
+  margX=margX.map(v=>v/dx);margY=margY.map(v=>v/dy);
+  // refine mode by hill climbing
+  mode=[gx(bi%GN),gy(Math.floor(bi/GN))];let f=lp(mode[0],mode[1]);
+  for(const h of [.2,.1,.05,.02,.01,.005,.002]){let moved=true;while(moved){moved=false;for(const [a,b] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){const nx=mode[0]+a*h,ny=mode[1]+b*h,v=lp(nx,ny);if(v>f){f=v;mode=[nx,ny];moved=true}}}}
+  const h=.01,f0=lp(...mode),fxx=(lp(mode[0]+h,mode[1])-2*f0+lp(mode[0]-h,mode[1]))/h/h,fyy=(lp(mode[0],mode[1]+h)-2*f0+lp(mode[0],mode[1]-h))/h/h,
+   fxy=(lp(mode[0]+h,mode[1]+h)-lp(mode[0]+h,mode[1]-h)-lp(mode[0]-h,mode[1]+h)+lp(mode[0]-h,mode[1]-h))/(4*h*h);
+  const a=-fxx,b=-fxy,c=-fyy,det=a*c-b*b;Sig=[[c/det,-b/det],[-b/det,a/det]];sdL=[Math.sqrt(Sig[0][0]),Math.sqrt(Sig[1][1])];
+  const tr=a+c,ds=Math.sqrt(Math.max(tr*tr/4-det,0));lap={l:[tr/2+ds,Math.max(tr/2-ds,1e-12)],th:.5*Math.atan2(2*b,a-c),f:f0,det};
+  levels=[.5,2,4.5,8].map(k=>mx-k);
+}
+const startRandom=()=>{for(let t=0;t<5000;t++){const x=dom[0][0]+Math.random()*(dom[0][1]-dom[0][0]),y=dom[1][0]+Math.random()*(dom[1][1]-dom[1][0]);if(lp(x,y)>vmax-6)return[x,y]}return mode.slice()};
+function restart(){const s2=startRandom();A=[{p:mode.slice(),l:lp(mode[0],mode[1])}];Bc=[{p:s2,l:lp(s2[0],s2[1])}];A=[A[0]];acc=[0,0];nsteps=0;draw()}
+function stepChain(ch,k){const c=ch[ch.length-1],q=[c.p[0]+step*randn(),c.p[1]+step*randn()],l=lp(q[0],q[1]);
+  if(Math.log(Math.random())<l-c.l){ch.push({p:q,l});acc[k]++}else ch.push(c)}
+function run(k){for(let i=0;i<k;i++){stepChain(A,0);stepChain(Bc,1);nsteps++}
+  if(A.length>120000){A.splice(0,60000);Bc.splice(0,60000)}draw()}
+function ticks(svg,x0,x1,y0,y1,X,Y,xl,yl,fx,fy,nt=5){const g=el("g",{class:"grid"},svg),a=el("g",{class:"axis"},svg);
+  for(let k=0;k<nt;k++){const vx=x0+(x1-x0)*k/(nt-1),vy=y0+(y1-y0)*k/(nt-1);
+    el("line",{x1:X(vx),x2:X(vx),y1:Y(y0),y2:Y(y1)},g);el("line",{x1:X(x0),x2:X(x1),y1:Y(vy),y2:Y(vy)},g);
+    el("text",{x:X(vx),y:Y(y0)+16,"text-anchor":"middle"},a).textContent=fx(vx);el("text",{x:X(x0)-6,y:Y(vy)+4,"text-anchor":"end"},a).textContent=fy(vy)}
+  el("text",{x:(X(x0)+X(x1))/2,y:Y(y0)+31,"text-anchor":"middle"},a).textContent=xl;
+  el("text",{transform:`translate(13 ${(Y(y0)+Y(y1))/2}) rotate(-90)`,"text-anchor":"middle"},a).textContent=yl}
+function drawWS(){
+  const svg=$("ws");svg.innerHTML="";const m={l:52,r:12,t:10,b:42};
+  const Xs=v=>m.l+(v-dom[0][0])/(dom[0][1]-dom[0][0])*(W-m.l-m.r),Ys=v=>H-m.b-(v-dom[1][0])/(dom[1][1]-dom[1][0])*(H-m.t-m.b);
+  const cp=el("clipPath",{id:"cw"},el("defs",{},svg));el("rect",{x:m.l,y:m.t,width:W-m.l-m.r,height:H-m.t-m.b},cp);
+  ticks(svg,dom[0][0],dom[0][1],dom[1][0],dom[1][1],Xs,Ys,"w₁","w₂",v=>v.toFixed(1),v=>v.toFixed(1));
+  const gp=el("g",{"clip-path":"url(#cw)"},svg),cw=(W-m.l-m.r)/GN,ch=(H-m.t-m.b)/GN;let d="";
+  for(const lev of levels)for(let j=0;j<GN-1;j++)for(let i=0;i<GN-1;i++){
+    const v=[logv[j*GN+i],logv[j*GN+i+1],logv[(j+1)*GN+i+1],logv[(j+1)*GN+i]],pt=[[i+.5,j+.5],[i+1.5,j+.5],[i+1.5,j+1.5],[i+.5,j+1.5]],e=[];
+    if(v.some(x=>x===-Infinity))continue;
+    for(let k=0;k<4;k++){const a=v[k],b=v[(k+1)%4];if((a-lev)*(b-lev)<0){const f=(lev-a)/(b-a),p=pt[k],q=pt[(k+1)%4];e.push([m.l+(p[0]+f*(q[0]-p[0]))*cw,H-m.b-(p[1]+f*(q[1]-p[1]))*ch])}}
+    if(e.length===2)d+=`M${e[0][0].toFixed(1)} ${e[0][1].toFixed(1)}L${e[1][0].toFixed(1)} ${e[1][1].toFixed(1)}`;
+    else if(e.length===4)d+=`M${e[0][0].toFixed(1)} ${e[0][1].toFixed(1)}L${e[1][0].toFixed(1)} ${e[1][1].toFixed(1)}M${e[2][0].toFixed(1)} ${e[2][1].toFixed(1)}L${e[3][0].toFixed(1)} ${e[3][1].toFixed(1)}`}
+  el("path",{d,fill:"none",stroke:"var(--a)","stroke-width":1.4,"stroke-opacity":.8},gp);
+  const v1=[Math.cos(lap.th),Math.sin(lap.th)],v2=[-Math.sin(lap.th),Math.cos(lap.th)];
+  [.5,2,4.5,8].forEach(k=>{let e="";const r=Math.sqrt(2*k);for(let q=0;q<=100;q++){const t=2*Math.PI*q/100,p1=r*Math.cos(t)/Math.sqrt(lap.l[0]),p2=r*Math.sin(t)/Math.sqrt(lap.l[1]);
+    e+=(q?"L":"M")+Xs(mode[0]+p1*v1[0]+p2*v2[0]).toFixed(1)+" "+Ys(mode[1]+p1*v1[1]+p2*v2[1]).toFixed(1)}el("path",{d:e,fill:"none",stroke:"var(--r)","stroke-width":1.4,"stroke-dasharray":"5 4"},gp)});
+  [[A,"var(--a)"],[Bc,"var(--b)"]].forEach(([c,col])=>{const s0=Math.max(0,c.length-3000);
+    for(let i=s0;i<c.length;i++)el("circle",{cx:Xs(c[i].p[0]),cy:Ys(c[i].p[1]),r:1.5,fill:col,"fill-opacity":.35},gp);
+    const tail=c.slice(-150);if(tail.length>1)el("path",{d:tail.map((q,i)=>(i?"L":"M")+Xs(q.p[0]).toFixed(1)+" "+Ys(q.p[1]).toFixed(1)).join(""),fill:"none",stroke:col,"stroke-width":1.2},gp);
+    const q=c[c.length-1].p;el("circle",{cx:Xs(q[0]),cy:Ys(q[1]),r:6,fill:col,stroke:"var(--bg)","stroke-width":2},gp)});
+  const X0=Xs(mode[0]),Y0=Ys(mode[1]);el("path",{d:`M${X0} ${Y0-8}L${X0+8} ${Y0}L${X0} ${Y0+8}L${X0-8} ${Y0}Z`,fill:"var(--ok)",stroke:"var(--bg)","stroke-width":1.5},svg)}
+function drawTrace(){
+  const svg=$("tr");svg.innerHTML="";const m={l:52,r:12},L=A.length,stride=Math.max(1,Math.floor(L/1500));
+  [0,1].forEach(j=>{const t0=j?170:8,t1=j?275:150,y0=dom[j][0],y1=dom[j][1];
+    const Xs=i=>m.l+i/Math.max(L-1,1)*(W-m.l-m.r),Ys=v=>t1-(v-y0)/(y1-y0)*(t1-t0);
+    const g=el("g",{class:"grid"},svg),a=el("g",{class:"axis"},svg);
+    for(let k=0;k<3;k++){const v=y0+(y1-y0)*k/2;el("line",{x1:m.l,x2:W-m.r,y1:Ys(v),y2:Ys(v)},g);el("text",{x:m.l-6,y:Ys(v)+4,"text-anchor":"end"},a).textContent=v.toFixed(1)}
+    el("text",{transform:`translate(13 ${(t0+t1)/2}) rotate(-90)`,"text-anchor":"middle"},a).textContent=j?"w₂":"w₁";
+    if(j)el("text",{x:(m.l+W-m.r)/2,y:297,"text-anchor":"middle"},a).textContent="iteration";
+    const cp=el("clipPath",{id:"ct"+j},el("defs",{},svg));el("rect",{x:m.l,y:t0,width:W-m.l-m.r,height:t1-t0},cp);
+    [[A,"var(--a)"],[Bc,"var(--b)"]].forEach(([c,col])=>{const pts=[];for(let i=0;i<L;i+=stride)pts.push(i);
+      el("path",{d:pts.map((i,k)=>(k?"L":"M")+Xs(i).toFixed(1)+" "+Ys(c[i].p[j]).toFixed(1)).join(""),fill:"none",stroke:col,"stroke-width":1.1,"clip-path":`url(#ct${j})`},svg)});
+    if(burn<L)el("line",{x1:Xs(burn),x2:Xs(burn),y1:t0,y2:t1,stroke:"var(--muted)","stroke-dasharray":"4 3"},svg)})}
+function drawHist(id,j){
+  const svg=$(id);svg.innerHTML="";const w=380,h=240,m={l:44,r:10,t:10,b:34},a0=dom[j][0],a1=dom[j][1],B=40,bw=(a1-a0)/B,cnt=new Array(B).fill(0);let K=0;
+  [A,Bc].forEach(c=>{for(let i=burn;i<c.length;i++){const b=Math.floor((c[i].p[j]-a0)/bw);if(b>=0&&b<B)cnt[b]++;K++}});
+  const dn=cnt.map(c=>K?c/(K*bw):0),mg=j?margY:margX,gm=x=>Math.exp(-((x-mode[j])**2)/(2*sdL[j]**2))/(sdL[j]*Math.sqrt(2*Math.PI));
+  const tru=x=>{const i=Math.min(GN-1,Math.max(0,Math.floor((x-a0)/(a1-a0)*GN)));return mg[i]};
+  const ymax=Math.max(...dn,...Array.from(mg),gm(mode[j]))*1.1;
+  const Xs=v=>m.l+(v-a0)/(a1-a0)*(w-m.l-m.r),Ys=v=>h-m.b-v/ymax*(h-m.t-m.b);
+  ticks(svg,a0,a1,0,ymax,Xs,Ys,j?"w₂":"w₁","density",v=>v.toFixed(1),v=>v.toFixed(2),4);
+  dn.forEach((d,b)=>el("rect",{x:Xs(a0+b*bw)+.5,y:Ys(d),width:Math.max(1,Xs(a0+bw)-Xs(a0)-1),height:Ys(0)-Ys(d),fill:"var(--a)","fill-opacity":.5},svg));
+  const xs=Array.from({length:240},(_,i)=>a0+(a1-a0)*i/239);
+  el("path",{d:xs.map((x,i)=>(i?"L":"M")+Xs(x).toFixed(1)+" "+Ys(tru(x)).toFixed(1)).join(""),fill:"none",stroke:"var(--fg)","stroke-opacity":.7,"stroke-width":2.2},svg);
+  el("path",{d:xs.map((x,i)=>(i?"L":"M")+Xs(x).toFixed(1)+" "+Ys(gm(x)).toFixed(1)).join(""),fill:"none",stroke:"var(--r)","stroke-width":2,"stroke-dasharray":"5 4"},svg)}
+function stats(){
+  const it=nsteps;$("r1").textContent=it+" / "+(it?(100*(acc[0]+acc[1])/(2*it)).toFixed(1)+"%":"–");
+  const n=Math.max(0,A.length-burn);
+  if(n>20){const x=c=>{let s=0;for(let i=burn;i<c.length;i++)s+=c[i].p[0];return s/n},mA=x(A),mB=x(Bc),v=c=>{const m=x(c);let s=0;for(let i=burn;i<c.length;i++)s+=(c[i].p[0]-m)**2;return s/(n-1)},Wv=(v(A)+v(Bc))/2,Bv=n*((mA-(mA+mB)/2)**2+(mB-(mA+mB)/2)**2),vp=(n-1)/n*Wv+Bv/n,R=Math.sqrt(vp/Wv);
+    const rh=$("r2");rh.textContent=R.toFixed(3);rh.className=R>1.1?"warn":"";
+    const s0=Math.max(burn,A.length-5000),xs=A.slice(s0).map(q=>q.p[0]),K=xs.length,mu=xs.reduce((a,b)=>a+b,0)/K,va=xs.reduce((a,b)=>a+(b-mu)**2,0)/K;
+    let sum=0,r1=0;for(let t=1;t<Math.min(300,K/2);t++){let c=0;for(let i=t;i<K;i++)c+=(xs[i]-mu)*(xs[i-t]-mu);const r=c/(K*va);if(t===1)r1=r;if(r<0)break;sum+=r}
+    $("r3").textContent=(K/(1+2*sum)).toFixed(0)+" of "+K;$("r4").textContent=r1.toFixed(3);
+    const all=[...A.slice(burn),...Bc.slice(burn)],N2=all.length,m2=[0,1].map(j=>all.reduce((s,q)=>s+q.p[j],0)/N2),s2=[0,1].map(j=>Math.sqrt(all.reduce((s,q)=>s+(q.p[j]-m2[j])**2,0)/N2));
+    $("r5").textContent=`(${m2[0].toFixed(2)}, ${m2[1].toFixed(2)}) vs (${meanT[0].toFixed(2)}, ${meanT[1].toFixed(2)})`;
+    $("r6").textContent=`(${s2[0].toFixed(2)}, ${s2[1].toFixed(2)}) vs (${sdT[0].toFixed(2)}, ${sdT[1].toFixed(2)}) vs (${sdL[0].toFixed(2)}, ${sdL[1].toFixed(2)})`;
+    if(tg==="bi"){let left=0,sw=0,prev=A[burn].p[0]<0;for(let i=burn;i<A.length;i++){const l=A[i].p[0]<0;if(l)left++;if(l!==prev){sw++;prev=l}}$("r7").textContent=`${(100*left/n).toFixed(0)}% / ${(100-100*left/n).toFixed(0)}%, ${sw} switches`}else $("r7").textContent="(bimodal target only)"}
+  else["r2","r3","r4","r5","r6","r7"].forEach(i=>$(i).textContent="–")}
+function draw(){drawWS();drawTrace();drawHist("h1",0);drawHist("h2",1);stats();$("sto").textContent=step.toFixed(2);$("buo").textContent=burn;$("pro").textContent=par}
+function load(){tg=$("tg").value;const c=TG[tg],pr=$("pr");pr.min=c.min;pr.max=c.max;pr.step=c.step;pr.value=par=c.val;$("prl").textContent=c.lab;$("desc").textContent=c.desc;setup();restart()}
+$("tg").onchange=load;$("pr").oninput=()=>{par=+$("pr").value;setup();restart()};
+$("st").oninput=()=>{step=+$("st").value;draw()};$("bu").oninput=()=>{burn=+$("bu").value;draw()};
+$("b1000").onclick=()=>run(1000);$("b10000").onclick=()=>run(10000);$("reset").onclick=restart;
+$("rule").onclick=()=>{step=Math.min(4,Math.max(.02,2.4/Math.sqrt(2)*Math.min(...sdT)));$("st").value=step;draw()};
+$("auto").onclick=()=>{if(timer){clearInterval(timer);timer=null}else timer=setInterval(()=>run(50),60)};
+load();
+</script>
+</body>
+</html>

@@ -78,6 +78,7 @@ Notes by chapter (work in progress).
 **Sampling: Metropolis–Hastings**
 
 - [Interactive: the random walk, trace plots and histograms against the Laplace approximation](chapter4-poisson-mcmc.html)
+- [Interactive: when the random walk struggles (bimodal, skewed, curved, correlated targets)](chapter4-mcmc-failure-modes.html)
 
 **Exercises**
 
