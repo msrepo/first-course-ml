@@ -93,6 +93,10 @@ Notes by chapter (work in progress).
 
 - [Notes: Chapter 5 summary](chapter5-summary.html)
 
+**Gaussian class-conditional densities**
+
+- [Interactive: Figure 5.2, a Gaussian fitted to each class (Equations 5.4 and 5.5)](chapter5-class-conditional-gaussians.html)
+
 ## Chapter 6: Clustering
 
 **Overview**
