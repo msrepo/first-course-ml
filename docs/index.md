@@ -4,27 +4,51 @@ Notes by chapter (work in progress).
 
 ## Chapter 1: Linear modelling, a least-squares approach
 
+**Fitting a line**
+
 - [Interactive: fit a line to the Olympic data](chapter1-linear-modelling.html)
-- [Vector and matrix notation, and differentiating with it](chapter1-vector-matrix-notation.html)
+
+**Mathematical background**
+
+- [Notes: vector and matrix notation, and differentiating with it](chapter1-vector-matrix-notation.html)
 
 ## Chapter 2: Linear modelling from a probabilistic view
 
+**The noise model and the likelihood**
+
 - [Interactive: likelihood of a Gaussian linear model](chapter2-gaussian-likelihood.html)
-- [Interactive: maximum likelihood favours complex models](chapter2-model-complexity.html)
-- [Interactive: curvature of the likelihood (the Hessian)](chapter2-hessian.html)
+
+**The shape of the likelihood**
+
 - [Interactive: the quadratic bowl (log-likelihood surface)](chapter2-quadratic-bowl.html)
+- [Interactive: curvature of the likelihood (the Hessian)](chapter2-hessian.html)
+
+**Model complexity and uncertainty**
+
+- [Interactive: maximum likelihood favours complex models](chapter2-model-complexity.html)
 - [Interactive: predictive error bars](chapter2-predictive-error-bars.html)
-- [Maximum likelihood for the Bernoulli parameter](chapter2-bernoulli-mle.html)
+
+**Another example: the Bernoulli parameter**
+
+- [Notes: maximum likelihood for the Bernoulli parameter](chapter2-bernoulli-mle.html)
 
 ## Chapter 3: The Bayesian approach
 
-- [Chapter 3 summary: the Bayesian approach](chapter3-summary.html)
+**Overview**
+
+- [Notes: Chapter 3 summary](chapter3-summary.html)
+
+**The coin example: beta prior, binomial likelihood**
+
 - [Interactive: the beta density](chapter3-beta-density.html)
 - [Interactive: the binomial likelihood](chapter3-binomial-likelihood.html)
-- [The product of two Gaussians: derivation](chapter3-gaussian-product.html)
+- [Notes: posterior with a flat prior](chapter3-posterior-flat-prior.html)
+- [Notes: mean and variance of a beta random variable](chapter3-beta-mean.html)
+
+**Gaussian prior and Gaussian likelihood**
+
+- [Notes: the product of two Gaussians, derivation](chapter3-gaussian-product.html)
 - [Interactive: the product of two Gaussians](chapter3-gaussian-product-interactive.html)
-- [Mean and variance of a beta random variable](chapter3-beta-mean.html)
-- [Posterior with a flat prior](chapter3-posterior-flat-prior.html)
 
 ## Chapter 4: Bayesian inference
 
@@ -59,12 +83,18 @@ Notes by chapter (work in progress).
 
 ## Chapter 5: Classification
 
-- [Chapter 5 summary: classification](chapter5-summary.html)
+**Overview**
+
+- [Notes: Chapter 5 summary](chapter5-summary.html)
 
 ## Chapter 6: Clustering
 
-- [Chapter 6 summary: clustering](chapter6-summary.html)
+**Overview**
+
+- [Notes: Chapter 6 summary](chapter6-summary.html)
 
 ## Chapter 7: Principal components analysis and latent variable models
 
-- [Chapter 7 summary: PCA and latent variable models](chapter7-summary.html)
+**Overview**
+
+- [Notes: Chapter 7 summary](chapter7-summary.html)
