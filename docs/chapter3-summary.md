@@ -56,7 +56,7 @@ Integrate $$r$$ out given the prior parameters: $$p(y\mid\alpha,\beta)=\int p(y\
 Model: $$\mathbf t = \mathbf X\mathbf w + \boldsymbol\epsilon$$, noise $$\epsilon_n\sim\mathcal N(0,\sigma^2)$$, with $$\sigma^2$$ taken as known.
 
 - **Likelihood:** $$\mathcal N(\mathbf X\mathbf w,\ \sigma^2\mathbf I)$$.
-- **Prior (conjugate):** $$\mathbf w\sim\mathcal N(\boldsymbol\mu_0,\boldsymbol\Sigma_0)$$.
+- **Prior (conjugate):** $$\mathbf w\sim\mathcal N(\boldsymbol\mu_0,\boldsymbol\Sigma_0)$$. (The reason a Gaussian prior with a Gaussian likelihood gives a Gaussian posterior is worked out in [the product of two Gaussians](chapter3-gaussian-product.html).)
 - **Posterior is Gaussian**, $$\mathcal N(\boldsymbol\mu_w,\boldsymbol\Sigma_w)$$, found by collecting the quadratic and linear terms in $$\mathbf w$$:
 
 $$

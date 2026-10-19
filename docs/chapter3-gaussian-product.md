@@ -6,7 +6,7 @@ title: The product of two Gaussians
 
 # The product of two Gaussians
 
-Chapter 3 notes. A Gaussian prior combined with a Gaussian likelihood gives a Gaussian posterior (Bayesian linear regression, Section 3.7). The reason is that multiplying two Gaussian densities gives something with a Gaussian shape. This note derives that result for two Gaussians with means $$\mu_0,\mu_1$$ and variances $$\sigma_0^2,\sigma_1^2$$. An [interactive page](chapter3-gaussian-product.html) lets you move the two means and variances and watch the product.
+Chapter 3 notes. A Gaussian prior combined with a Gaussian likelihood gives a Gaussian posterior (Bayesian linear regression, Section 3.7). The reason is that multiplying two Gaussian densities gives something with a Gaussian shape. This note derives that result for two Gaussians with means $$\mu_0,\mu_1$$ and variances $$\sigma_0^2,\sigma_1^2$$. An [interactive page](chapter3-gaussian-product-interactive.html) lets you move the two means and variances and watch the product.
 
 ## Setup
 
