@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Chapter 4: The likelihood as a function of the data and of the weight</title>
+<title>Chapter 4: One function, two readings: the density of the data and the likelihood of the weight</title>
 <style>
 :root{--bg:#fff;--fg:#1f2328;--muted:#656d76;--grid:#d8dee4;--a:#1f6feb;--b:#d1242f;--card:#f6f8fa}
 @media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--grid:#30363d;--a:#58a6ff;--b:#ff7b72;--card:#161b22}}
@@ -29,7 +29,7 @@ svg{width:100%;height:auto;display:block;background:var(--bg);border-radius:8px}
 </head>
 <body>
 <main>
-<h1>The likelihood as a function of the data and of the weight</h1>
+<h1>One function, two readings: the density of the data and the likelihood of the weight</h1>
 <p class="muted">Chapter 4 · One input x, one weight w, noise variance σ². The model says the target t is Gaussian around the prediction w·x: p(t | x, w) = N(w·x, σ²). This is a single function of two variables, t and w. Drawn as a heat map, a vertical slice (w fixed) gives a density over t, and a horizontal slice (t fixed) gives the likelihood over w. Same numbers, two readings.</p>
 
 <div class="card sticky">
@@ -45,12 +45,12 @@ svg{width:100%;height:auto;display:block;background:var(--bg);border-radius:8px}
 
 <div class="cols">
   <div>
-    <h2>As a function of the data t (w fixed)</h2>
+    <h2>As a density over the data t (w fixed)</h2>
     <svg id="pa" viewBox="0 0 380 280" role="img" aria-label="Density of t for the chosen w"></svg>
     <p class="muted">A genuine density over t: it integrates to 1. Its centre is w·x and its spread does not depend on t.</p>
   </div>
   <div>
-    <h2>As a function of the weight w (t fixed)</h2>
+    <h2>As the likelihood over the weight w (t fixed)</h2>
     <svg id="pb" viewBox="0 0 380 280" role="img" aria-label="Likelihood of w for the observed t"></svg>
     <p class="muted">The likelihood over w: not a density, and its area is not 1. It is a Gaussian in w centred at t/x.</p>
   </div>
@@ -64,7 +64,7 @@ svg{width:100%;height:auto;display:block;background:var(--bg);border-radius:8px}
   <div>Right curve: precision x²/σ²<b id="prec"></b></div>
 </div>
 <div class="card muted">
-The height at the dot is one number, p(t | x, w), and it is the same in both slices. What differs is what you are allowed to say about the curve. Over t it is a probability density, so the area is 1. Over w it is the likelihood, which only tells you how well each w explains the fixed observation. Its area is 1/|x|, and its precision x²/σ² is the quantity that appears in the posterior as XᵀX/σ². The likelihood of w is highest at w = t/x, where the prediction w·x hits the observed t exactly.
+The height at the dot is one number, p(t | x, w), and it is the same in both slices. What differs is what you are allowed to say about the curve. Over t it is a probability density, so the area is 1. Over w it is the likelihood, which only tells you how well each w explains the fixed observation. Its area is 1/|x|, and its precision x²/σ² is the quantity that appears in the posterior as XᵀX/σ². Strictly, the word likelihood names only the second reading, the function of w with t fixed. The same expression read as a function of t is the model's density for the data. The likelihood of w is highest at w = t/x, where the prediction w·x hits the observed t exactly.
 </div>
 </main>
 <script>
