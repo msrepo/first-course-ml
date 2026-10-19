@@ -29,6 +29,7 @@ Notes by chapter (work in progress).
 
 - [Chapter 4 summary: Bayesian inference](chapter4-summary.html)
 - [Interactive: the binary response dataset](chapter4-binary-data.html)
+- [Interactive: the likelihood as a function of the data and of the weight](chapter4-likelihood-two-views.html)
 - [Interactive: evaluating the numerator of Bayes' rule at one w](chapter4-evaluate-numerator.html)
 - [The numerator of the posterior and what is intractable](chapter4-numerator-and-posterior.html)
 - [Interactive: Newton-Raphson step by step](chapter4-newton-raphson.html)

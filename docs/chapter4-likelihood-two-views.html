@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 4: The likelihood as a function of the data and of the weight</title>
+<style>
+:root{--bg:#fff;--fg:#1f2328;--muted:#656d76;--grid:#d8dee4;--a:#1f6feb;--b:#d1242f;--card:#f6f8fa}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--grid:#30363d;--a:#58a6ff;--b:#ff7b72;--card:#161b22}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
+main{max-width:900px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:.5rem 0}
+h2{font-size:1.05rem;margin:1rem 0 .3rem}
+.card{background:var(--card);border-radius:8px;padding:12px 16px;margin:12px 0}
+.row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin:6px 0}
+.row output{font-variant-numeric:tabular-nums;min-width:4em;text-align:right}
+input[type=range]{width:100%}
+svg{width:100%;height:auto;display:block;background:var(--bg);border-radius:8px}
+.axis text{fill:var(--muted);font-size:12px}
+.grid line{stroke:var(--grid)}
+.muted{color:var(--muted);font-size:.9rem}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.cols{grid-template-columns:minmax(0,1fr)}}
+.nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px 16px}
+.nums div{background:var(--bg);border-radius:8px;padding:8px 12px}
+.nums b{display:block;font-size:1.2rem;font-variant-numeric:tabular-nums}
+.sticky{position:sticky;top:0;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+</style>
+</head>
+<body>
+<main>
+<h1>The likelihood as a function of the data and of the weight</h1>
+<p class="muted">Chapter 4 · One input x, one weight w, noise variance σ². The model says the target t is Gaussian around the prediction w·x: p(t | x, w) = N(w·x, σ²). This is a single function of two variables, t and w. Drawn as a heat map, a vertical slice (w fixed) gives a density over t, and a horizontal slice (t fixed) gives the likelihood over w. Same numbers, two readings.</p>
+
+<div class="card sticky">
+  <div class="row"><label for="x">Input x</label><input type="range" id="x" min="0.3" max="3" step="0.05" value="1.5"><output id="xo"></output></div>
+  <div class="row"><label for="s2">Noise variance σ²</label><input type="range" id="s2" min="0.1" max="4" step="0.05" value="1"><output id="s2o"></output></div>
+  <div class="row"><label for="w">Weight w (fixed in the left slice)</label><input type="range" id="w" min="-4" max="4" step="0.05" value="1"><output id="wo"></output></div>
+  <div class="row"><label for="t">Observed target t (fixed in the right slice)</label><input type="range" id="t" min="-6" max="6" step="0.1" value="2"><output id="to"></output></div>
+</div>
+
+<h2>The function of both variables</h2>
+<svg id="heat" viewBox="0 0 760 360" role="img" aria-label="Heat map of the likelihood over the weight and the target"></svg>
+<p class="muted">Darker means a higher value of p(t | x, w). The dashed line is the prediction t = w·x. <span style="color:var(--a)">Blue vertical line</span>: w fixed, varying t. <span style="color:var(--b)">Red horizontal line</span>: t fixed, varying w. The dot is where the slices cross.</p>
+
+<div class="cols">
+  <div>
+    <h2>As a function of the data t (w fixed)</h2>
+    <svg id="pa" viewBox="0 0 380 280" role="img" aria-label="Density of t for the chosen w"></svg>
+    <p class="muted">A genuine density over t: it integrates to 1. Its centre is w·x and its spread does not depend on t.</p>
+  </div>
+  <div>
+    <h2>As a function of the weight w (t fixed)</h2>
+    <svg id="pb" viewBox="0 0 380 280" role="img" aria-label="Likelihood of w for the observed t"></svg>
+    <p class="muted">The likelihood over w: not a density, and its area is not 1. It is a Gaussian in w centred at t/x.</p>
+  </div>
+</div>
+
+<div class="card nums">
+  <div>Height at the dot, p(t | x, w)<b id="h"></b></div>
+  <div>Area under the left curve (over t)<b id="aa"></b></div>
+  <div>Area under the right curve (over w)<b id="ab"></b></div>
+  <div>Right curve: centre t/x<b id="cen"></b></div>
+  <div>Right curve: precision x²/σ²<b id="prec"></b></div>
+</div>
+<div class="card muted">
+The height at the dot is one number, p(t | x, w), and it is the same in both slices. What differs is what you are allowed to say about the curve. Over t it is a probability density, so the area is 1. Over w it is the likelihood, which only tells you how well each w explains the fixed observation. Its area is 1/|x|, and its precision x²/σ² is the quantity that appears in the posterior as XᵀX/σ². The likelihood of w is highest at w = t/x, where the prediction w·x hits the observed t exactly.
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id), NS="http://www.w3.org/2000/svg";
+const pdf=(t,m,v)=>Math.exp(-((t-m)**2)/(2*v))/Math.sqrt(2*Math.PI*v);
+function el(n,a,p){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e}
+const WR=[-4,4], TR=[-6,6], YMAX=1.4;
+function axes(svg,X,Y,x0,x1,y0,y1,xs,ys,xl,yl,W,H,M){
+  const g=el("g",{class:"grid"},svg),a=el("g",{class:"axis"},svg);
+  for(let v=Math.ceil(x0);v<=x1;v+=xs){el("line",{x1:X(v),x2:X(v),y1:Y(y0),y2:Y(y1)},g);el("text",{x:X(v),y:Y(y0)+16,"text-anchor":"middle"},a).textContent=v}
+  for(let v=Math.ceil(y0*10)/10;v<=y1+1e-9;v+=ys){el("line",{x1:X(x0),x2:X(x1),y1:Y(v),y2:Y(v)},g);el("text",{x:X(x0)-6,y:Y(v)+4,"text-anchor":"end"},a).textContent=+v.toFixed(1)}
+  el("text",{x:(X(x0)+X(x1))/2,y:H-6,"text-anchor":"middle"},a).textContent=xl;
+  el("text",{transform:`translate(14 ${(Y(y0)+Y(y1))/2}) rotate(-90)`,"text-anchor":"middle"},a).textContent=yl}
+function integrate(f,lo,hi,n=6000){let s=0,h=(hi-lo)/n;for(let i=0;i<=n;i++){s+=f(lo+i*h)*(i===0||i===n?0.5:1)}return s*h}
+function draw(){
+  const x=+$("x").value, v=+$("s2").value, w=+$("w").value, t=+$("t").value;
+  // heat map over (w,t)
+  {const svg=$("heat");svg.innerHTML="";const W=760,H=360,M={l:56,r:16,t:12,b:40};
+   const X=q=>M.l+(q-WR[0])/(WR[1]-WR[0])*(W-M.l-M.r), Y=q=>H-M.b-(q-TR[0])/(TR[1]-TR[0])*(H-M.t-M.b);
+   const NW=80,NT=60,cw=(W-M.l-M.r)/NW,ch=(H-M.t-M.b)/NT;
+   for(let i=0;i<NW;i++)for(let j=0;j<NT;j++){const ww=WR[0]+(i+.5)*(WR[1]-WR[0])/NW,tt=TR[0]+(j+.5)*(TR[1]-TR[0])/NT,p=pdf(tt,x*ww,v);
+     el("rect",{x:M.l+i*cw,y:H-M.b-(j+1)*ch,width:cw+.5,height:ch+.5,fill:"var(--a)","fill-opacity":Math.min(1,Math.sqrt(p/1.2)).toFixed(3)},svg)}
+   axes(svg,X,Y,WR[0],WR[1],TR[0],TR[1],1,2,"weight w","target t",W,H,M);
+   const cp=el("clipPath",{id:"ch"},el("defs",{},svg));el("rect",{x:M.l,y:M.t,width:W-M.l-M.r,height:H-M.t-M.b},cp);
+   el("line",{x1:X(WR[0]),y1:Y(x*WR[0]),x2:X(WR[1]),y2:Y(x*WR[1]),stroke:"var(--fg)","stroke-dasharray":"6 4","stroke-width":1.5,"clip-path":"url(#ch)"},svg);
+   el("line",{x1:X(w),x2:X(w),y1:Y(TR[0]),y2:Y(TR[1]),stroke:"var(--a)","stroke-width":2.5},svg);
+   el("line",{x1:X(WR[0]),x2:X(WR[1]),y1:Y(t),y2:Y(t),stroke:"var(--b)","stroke-width":2.5},svg);
+   el("circle",{cx:X(w),cy:Y(t),r:6,fill:"var(--fg)",stroke:"var(--bg)","stroke-width":2},svg)}
+  // slice over t
+  {const svg=$("pa");svg.innerHTML="";const W=380,H=280,M={l:46,r:10,t:10,b:36};
+   const X=q=>M.l+(q-TR[0])/(TR[1]-TR[0])*(W-M.l-M.r), Y=q=>H-M.b-q/YMAX*(H-M.t-M.b);
+   axes(svg,X,Y,TR[0],TR[1],0,YMAX,2,0.2,"target t","p(t | x, w)",W,H,M);
+   const N=300,xs=Array.from({length:N+1},(_,i)=>TR[0]+(TR[1]-TR[0])*i/N);
+   el("path",{d:`M${X(TR[0])} ${Y(0)}`+xs.map(q=>`L${X(q)} ${Y(pdf(q,x*w,v))}`).join("")+`L${X(TR[1])} ${Y(0)}Z`,fill:"var(--a)","fill-opacity":.18,stroke:"none"},svg);
+   el("path",{d:xs.map((q,i)=>(i?"L":"M")+X(q).toFixed(1)+" "+Y(pdf(q,x*w,v)).toFixed(1)).join(""),fill:"none",stroke:"var(--a)","stroke-width":2.5},svg);
+   el("line",{x1:X(t),x2:X(t),y1:Y(0),y2:Y(pdf(t,x*w,v)),stroke:"var(--b)","stroke-width":2},svg);
+   el("circle",{cx:X(t),cy:Y(pdf(t,x*w,v)),r:5,fill:"var(--fg)"},svg)}
+  // slice over w
+  {const svg=$("pb");svg.innerHTML="";const W=380,H=280,M={l:46,r:10,t:10,b:36};
+   const X=q=>M.l+(q-WR[0])/(WR[1]-WR[0])*(W-M.l-M.r), Y=q=>H-M.b-q/YMAX*(H-M.t-M.b);
+   axes(svg,X,Y,WR[0],WR[1],0,YMAX,1,0.2,"weight w","p(t | x, w)",W,H,M);
+   const N=300,ws=Array.from({length:N+1},(_,i)=>WR[0]+(WR[1]-WR[0])*i/N), L=q=>pdf(t,x*q,v);
+   const cp=el("clipPath",{id:"cb"},el("defs",{},svg));el("rect",{x:M.l,y:M.t,width:W-M.l-M.r,height:H-M.t-M.b},cp);
+   el("path",{d:`M${X(WR[0])} ${Y(0)}`+ws.map(q=>`L${X(q)} ${Y(L(q))}`).join("")+`L${X(WR[1])} ${Y(0)}Z`,fill:"var(--b)","fill-opacity":.18,stroke:"none","clip-path":"url(#cb)"},svg);
+   el("path",{d:ws.map((q,i)=>(i?"L":"M")+X(q).toFixed(1)+" "+Y(L(q)).toFixed(1)).join(""),fill:"none",stroke:"var(--b)","stroke-width":2.5,"clip-path":"url(#cb)"},svg);
+   el("line",{x1:X(w),x2:X(w),y1:Y(0),y2:Y(L(w)),stroke:"var(--a)","stroke-width":2},svg);
+   el("circle",{cx:X(w),cy:Y(L(w)),r:5,fill:"var(--fg)"},svg);
+   el("line",{x1:X(t/x),x2:X(t/x),y1:Y(0),y2:Y(L(t/x)),stroke:"var(--muted)","stroke-dasharray":"3 3","clip-path":"url(#cb)"},svg)}
+  // readouts: areas are integrated numerically over a wide range so nothing is cut off
+  $("h").textContent=pdf(t,x*w,v).toFixed(4);
+  $("aa").textContent=integrate(q=>pdf(q,x*w,v),-80,80).toFixed(4);
+  $("ab").textContent=integrate(q=>pdf(t,x*q,v),-80,80).toFixed(4)+"  (1/|x| = "+(1/x).toFixed(4)+")";
+  $("cen").textContent=(t/x).toFixed(3); $("prec").textContent=(x*x/v).toFixed(3);
+  $("xo").textContent=x.toFixed(2);$("s2o").textContent=v.toFixed(2);$("wo").textContent=w.toFixed(2);$("to").textContent=t.toFixed(1);
+}
+["x","s2","w","t"].forEach(id=>$(id).addEventListener("input",draw));
+draw();
+</script>
+</body>
+</html>
