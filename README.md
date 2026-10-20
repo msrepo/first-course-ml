@@ -4,6 +4,8 @@ My own study notes and Python ports of the MATLAB examples from *A First Course 
 
 Notes are published with GitHub Pages from `docs/`.
 
+I used AI heavily to help me understand the book. The notes, derivations and exercise solutions are mostly AI-written in response to the questions I asked while studying, so they are not in my own words, and they may contain mistakes.
+
 The original MATLAB code is not redistributed here; link below.
 
 The book itself is not included in this repository. Please get a copy from the publisher.

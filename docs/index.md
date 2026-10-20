@@ -6,6 +6,8 @@ title: A First Course in Machine Learning
 
 <p class="lede">My own study notes, exercise solutions and interactive visualisations for <em>A First Course in Machine Learning</em> by Simon Rogers and Mark Girolami, with Python ports of the MATLAB examples. Work in progress. The book itself is not included here: please get a copy from the publisher.</p>
 
+<p class="lede">I used AI heavily to help me understand the book. The derivations and explanations are mostly AI-written in response to the questions I asked while studying, so they are not in my own words, and they may contain mistakes.</p>
+
 ### Where to start
 
 - Never seen the Bayesian chapters? Read the [Chapter 3 summary](chapter3-summary.html), then the [Chapter 4 summary](chapter4-summary.html).
