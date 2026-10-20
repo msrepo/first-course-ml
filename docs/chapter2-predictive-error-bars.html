@@ -23,8 +23,10 @@ select,button{font:inherit;padding:4px 10px}
 .nums{display:flex;flex-wrap:wrap;gap:8px 28px}
 .nums b{font-variant-numeric:tabular-nums}
 </style>
+<link rel="stylesheet" href="assets/interactive.css">
 </head>
 <body>
+<div class="topnav"><a href="index.html">&larr; A First Course in Machine Learning, notes</a></div>
 <main>
 <h1>Predictive error bars</h1>
 <p class="muted">Chapter 2 · The fitted line is a best guess, but the data only pin down w to within some uncertainty. That uncertainty carries into predictions: for a new year x<sub>new</sub>, the prediction is ŵᵀx<sub>new</sub> with variance σ² x<sub>new</sub>ᵀ(XᵀX)⁻¹x<sub>new</sub>. The band is the prediction ± that spread.</p>

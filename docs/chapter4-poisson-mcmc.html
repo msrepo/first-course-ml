@@ -29,8 +29,10 @@ button{font:inherit;padding:4px 10px}
 .sticky{position:sticky;top:0;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.12)}
 @media (max-width:760px){.sticky{position:static}}
 </style>
+<link rel="stylesheet" href="assets/interactive.css">
 </head>
 <body>
+<div class="topnav"><a href="index.html">&larr; A First Course in Machine Learning, notes</a></div>
 <main>
 <h1>Metropolis–Hastings: a random walk on the Poisson posterior</h1>
 <p class="muted">Chapter 4, Exercise 4.8 · The model is Poisson regression, t<sub>n</sub> ~ Poisson(exp(w<sub>1</sub> + w<sub>2</sub>u<sub>n</sub>)), with a Gaussian prior N(0, σ²I) on the two weights. We can evaluate g(w) = prior × likelihood at any w but not the normaliser, so we sample with a random walk: propose a nearby w*, accept it with probability min(1, g(w*)/g(w)), otherwise stay put. The data are synthetic and are the same as in the Python script (the first n of 60 points).</p>

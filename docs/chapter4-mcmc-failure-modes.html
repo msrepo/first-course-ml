@@ -28,8 +28,10 @@ button,select{font:inherit;padding:4px 10px}
 @media (max-width:760px){.sticky{position:static}}
 .warn{color:var(--r)}
 </style>
+<link rel="stylesheet" href="assets/interactive.css">
 </head>
 <body>
+<div class="topnav"><a href="index.html">&larr; A First Course in Machine Learning, notes</a></div>
 <main>
 <h1>When the random walk goes wrong</h1>
 <p class="muted">Chapter 4 · The Metropolis–Hastings random walk of Exercise 4.8 works well when the posterior is one compact, roughly round blob. This page uses a simpler two-weight target so that you can break it on purpose. Two chains run with the same Gaussian proposal of one step size, one starting at the mode and one starting at a random place with non-negligible density. Compare the walk with the true density, and the histograms with both the true marginals and the Laplace approximation (a Gaussian at the highest mode).</p>

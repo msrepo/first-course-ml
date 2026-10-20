@@ -27,8 +27,10 @@ button,input[type=number]{font:inherit;padding:4px 10px}
 #msg{color:var(--b);font-weight:500}
 @media (max-width:760px){.sticky{position:static}}
 </style>
+<link rel="stylesheet" href="assets/interactive.css">
 </head>
 <body>
+<div class="topnav"><a href="index.html">&larr; A First Course in Machine Learning, notes</a></div>
 <main>
 <h1>The coin posterior and its Laplace approximation</h1>
 <p class="muted">Chapter 4, Exercise 4.3 · After y heads in N tosses, with a Beta(α, β) prior on the head probability r, the exact posterior is Beta(δ, γ) with δ = α + y and γ = β + N − y. The Laplace approximation is a Gaussian centred at the mode r̂ = (δ − 1)/(δ + γ − 2) with variance (δ − 1)(γ − 1)/(δ + γ − 2)³. Move the sliders and watch where the Gaussian is a good stand-in.</p>

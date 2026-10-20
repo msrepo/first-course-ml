@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ page.title | default: "A First Course in Machine Learning" }}{% if page.url != "/" and page.url != "/index.html" %} | First Course ML notes{% endif %}</title>
+<link rel="stylesheet" href="assets/style.css">
+<script>
+(function(){try{
+  var v=localStorage.getItem('sidebar-collapsed');
+  if(v===null)v=window.matchMedia('(max-width: 66rem)').matches?'1':'0';
+  if(v==='1')document.documentElement.classList.add('nav-collapsed');
+}catch(e){}})();
+</script>
+</head>
+<body>
+<button class="nav-toggle" type="button" aria-controls="site-nav" aria-expanded="true" aria-label="Show or hide the contents sidebar"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg></button>
+<div class="layout">
+<nav class="sidebar" id="site-nav">
+{% include nav.html %}
+</nav>
+<main>
+{{ content }}
+</main>
+</div>
+<script>
+(function(){
+  var b=document.querySelector('.nav-toggle');
+  function sync(){b.setAttribute('aria-expanded',String(!document.documentElement.classList.contains('nav-collapsed')));}
+  sync();
+  b.addEventListener('click',function(){
+    var c=document.documentElement.classList.toggle('nav-collapsed');
+    try{localStorage.setItem('sidebar-collapsed',c?'1':'0');}catch(e){}
+    sync();
+  });
+  var here=location.pathname.split('/').pop()||'index.html';
+  document.querySelectorAll('#site-nav a[href]').forEach(function(a){
+    if(a.getAttribute('href')===here){a.setAttribute('aria-current','page');var d=a.closest('details');if(d)d.open=true;}
+  });
+})();
+</script>
+</body>
+</html>

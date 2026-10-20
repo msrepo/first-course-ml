@@ -29,8 +29,10 @@ button{font:inherit;padding:4px 10px}
 .sticky{position:sticky;top:0;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.12)}
 @media (max-width:760px){.sticky{position:static}}
 </style>
+<link rel="stylesheet" href="assets/interactive.css">
 </head>
 <body>
+<div class="topnav"><a href="index.html">&larr; A First Course in Machine Learning, notes</a></div>
 <main>
 <h1>Laplace approximation for the binary response model</h1>
 <p class="muted">Chapter 4 · The posterior over the two weights, g(w) / Z, has no standard form. The Laplace approximation replaces it by a Gaussian centred at its peak (the MAP weights, found by Newton–Raphson) with covariance Σ = −H⁻¹, the inverse curvature at that peak. Samples from the Gaussian then give a fan of decision boundaries and an averaged prediction.</p>

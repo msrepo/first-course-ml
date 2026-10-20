@@ -27,8 +27,10 @@ svg{width:100%;height:auto;display:block;background:var(--bg);border-radius:8px}
 .sticky{position:sticky;top:0;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.12)}
 @media (max-width:760px){.sticky{position:static}}
 </style>
+<link rel="stylesheet" href="assets/interactive.css">
 </head>
 <body>
+<div class="topnav"><a href="index.html">&larr; A First Course in Machine Learning, notes</a></div>
 <main>
 <h1>One function, two readings: the density of the data and the likelihood of the weight</h1>
 <p class="muted">Chapter 4 · One input x, one weight w, noise variance σ². The model says the target t is Gaussian around the prediction w·x: p(t | x, w) = N(w·x, σ²). This is a single function of two variables, t and w. Drawn as a heat map, a vertical slice (w fixed) gives a density over t, and a horizontal slice (t fixed) gives the likelihood over w. Same numbers, two readings.</p>

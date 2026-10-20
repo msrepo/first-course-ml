@@ -22,8 +22,10 @@ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font
 td,th{padding:3px 6px;text-align:right;border-bottom:1px solid var(--grid)}th:first-child,td:first-child{text-align:left}
 .sw{display:inline-block;width:.8em;height:.8em;margin-right:.3em}
 </style>
+<link rel="stylesheet" href="assets/interactive.css">
 </head>
 <body>
+<div class="topnav"><a href="index.html">&larr; A First Course in Machine Learning, notes</a></div>
 <main>
 <h1>Figure 5.2: fitting a Gaussian to each class</h1>
 <p class="muted">Each class c gets its own Gaussian N(μ<sub>c</sub>, Σ<sub>c</sub>) fitted from the points of that class only, with the maximum-likelihood estimates of Equations 5.4 and 5.5: μ<sub>c</sub> is the mean of the class's points and Σ<sub>c</sub> = (1/N<sub>c</sub>) Σ (x − μ<sub>c</sub>)(x − μ<sub>c</sub>)<sup>T</sup>. The contours are curves of equal density, which for a Gaussian are ellipses. The data are synthetic (30 points per class, as in the book) and are not the book's own points. <b>Drag a point and watch its class's fit change.</b></p>

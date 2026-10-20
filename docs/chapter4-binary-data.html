@@ -25,8 +25,10 @@ th,td{padding:4px 10px;text-align:right}
 th:first-child,td:first-child{text-align:left}
 th{color:var(--muted);font-weight:500;font-size:.9rem}
 </style>
+<link rel="stylesheet" href="assets/interactive.css">
 </head>
 <body>
+<div class="topnav"><a href="index.html">&larr; A First Course in Machine Learning, notes</a></div>
 <main>
 <h1>A binary response dataset, with a Gaussian prior on the weights</h1>
 <p class="muted">Chapter 4 · Each object has two attributes and a label t. The model is P(t = 1 | x, w) = 1/(1 + exp(−wᵀx)) with prior w ~ N(0, σ²I). Draw weight vectors from the prior and see which classifiers they give, then compare with the weights that fit the data best (the MAP estimate). Data: <code>logregdata.mat</code>.</p>

@@ -1,0 +1,7 @@
+title: A First Course in Machine Learning, notes
+defaults:
+  - scope:
+      path: ""
+      type: pages
+    values:
+      layout: default
